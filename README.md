@@ -1,1828 +1,1234 @@
-# 🏗️ BharatVani - Technical Architecture & Implementation Guide
+# 🏗️ BharatVani - Technical Architecture Part 2
 
-## AI for Bharat Hackathon 2026
-
----
-
-## 📋 Table of Contents
-
-1. [System Architecture Overview](#system-architecture-overview)
-2. [AWS Services Integration](#aws-services-integration)
-3. [Data Pipeline & Flow](#data-pipeline--flow)
-4. [Database Schema](#database-schema)
-5. [API Architecture](#api-architecture)
-6. [Call Flow & State Management](#call-flow--state-management)
-7. [Implementation Guide (48 Hours)](#implementation-guide-48-hours)
-8. [Code Structure & Examples](#code-structure--examples)
-9. [Testing Strategy](#testing-strategy)
-10. [Deployment & Scaling](#deployment--scaling)
+## Implementation, Code Examples, Testing & Deployment
 
 ---
 
-## 1. System Architecture Overview
+## 7. Implementation Guide (48 Hours)
 
-### High-Level Architecture
+### Hour-by-Hour Build Plan
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         USER LAYER                               │
-│                                                                  │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐         │
-│  │ Feature Phone│  │  Smartphone  │  │   Landline   │         │
-│  │  (DTMF/Voice)│  │    (Voice)   │  │   (Voice)    │         │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘         │
-│         │                  │                  │                  │
-└─────────┼──────────────────┼──────────────────┼─────────────────┘
-          │                  │                  │
-          └──────────────────┴──────────────────┘
-                             │
-                    ┌────────▼────────┐
-                    │   PSTN/Telecom  │
-                    │     Network     │
-                    └────────┬────────┘
-                             │
-┌────────────────────────────▼─────────────────────────────────────┐
-│                      AWS CLOUD LAYER                              │
-│                                                                   │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │              AMAZON CONNECT (IVR)                         │   │
-│  │  - Call routing & management                              │   │
-│  │  - DTMF & Voice input collection                         │   │
-│  │  - Multi-language support                                │   │
-│  │  - Contact flows & queue management                      │   │
-│  └────┬────────────────────────────────────────────┬────────┘   │
-│       │                                             │             │
-│  ┌────▼─────────────┐                    ┌─────────▼──────────┐ │
-│  │ AMAZON TRANSCRIBE│                    │   AMAZON POLLY     │ │
-│  │  (Speech-to-Text)│                    │  (Text-to-Speech)  │ │
-│  │                  │                    │                    │ │
-│  │ • Hindi          │                    │ • Hindi (Aditi)    │ │
-│  │ • English        │                    │ • English (Raveena)│ │
-│  │ • Tamil          │                    │ • Tamil            │ │
-│  │ • 20+ languages  │                    │ • 20+ voices       │ │
-│  └────┬─────────────┘                    └─────────▲──────────┘ │
-│       │                                             │             │
-│  ┌────▼──────────────────────────────────────────┬─┘            │
-│  │              CORE PROCESSING LAYER              │             │
-│  │                                                │              │
-│  │  ┌───────────────────────────────────────┐   │              │
-│  │  │      AMAZON BEDROCK (Claude 3.5)      │   │              │
-│  │  │  - Natural language understanding     │   │              │
-│  │  │  - Intent extraction                  │   │              │
-│  │  │  - Context management                 │   │              │
-│  │  │  - Conversation orchestration         │   │              │
-│  │  │  - Response generation                │   │              │
-│  │  └───────────────┬───────────────────────┘   │              │
-│  │                  │                            │              │
-│  │  ┌───────────────▼───────────────────────┐   │              │
-│  │  │     AWS LAMBDA (Business Logic)       │   │              │
-│  │  │                                       │   │              │
-│  │  │  ┌─────────────────────────────────┐ │   │              │
-│  │  │  │  session_manager.py             │ │   │              │
-│  │  │  │  - Session state tracking       │ │   │              │
-│  │  │  │  - Context persistence          │ │   │              │
-│  │  │  └─────────────────────────────────┘ │   │              │
-│  │  │                                       │   │              │
-│  │  │  ┌─────────────────────────────────┐ │   │              │
-│  │  │  │  railway_booking_handler.py     │ │   │              │
-│  │  │  │  - Train search logic           │ │   │              │
-│  │  │  │  - Booking orchestration        │ │   │              │
-│  │  │  └─────────────────────────────────┘ │   │              │
-│  │  │                                       │   │              │
-│  │  │  ┌─────────────────────────────────┐ │   │              │
-│  │  │  │  government_schemes_handler.py  │ │   │              │
-│  │  │  │  - Scheme eligibility check     │ │   │              │
-│  │  │  │  - Application guidance         │ │   │              │
-│  │  │  └─────────────────────────────────┘ │   │              │
-│  │  │                                       │   │              │
-│  │  │  ┌─────────────────────────────────┐ │   │              │
-│  │  │  │  aadhaar_services_handler.py    │ │   │              │
-│  │  │  │  - Document retrieval           │ │   │              │
-│  │  │  │  - Status checking              │ │   │              │
-│  │  │  └─────────────────────────────────┘ │   │              │
-│  │  └───────────────┬───────────────────────┘   │              │
-│  │                  │                            │              │
-│  └──────────────────┼────────────────────────────┘              │
-│                     │                                            │
-│  ┌──────────────────▼──────────────────────────────────────┐   │
-│  │                 DATA LAYER                               │   │
-│  │                                                          │   │
-│  │  ┌────────────────┐  ┌────────────────┐  ┌───────────┐ │   │
-│  │  │   DynamoDB     │  │   DynamoDB     │  │ DynamoDB  │ │   │
-│  │  │   (Sessions)   │  │   (Bookings)   │  │  (Users)  │ │   │
-│  │  └────────────────┘  └────────────────┘  └───────────┘ │   │
-│  │                                                          │   │
-│  │  ┌────────────────────────────────────────────────────┐ │   │
-│  │  │              Amazon S3                             │ │   │
-│  │  │  - Call recordings (optional)                      │ │   │
-│  │  │  - Conversation logs                               │ │   │
-│  │  │  - Analytics data                                  │ │   │
-│  │  └────────────────────────────────────────────────────┘ │   │
-│  └──────────────────────────────────────────────────────────┘   │
-│                                                                   │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │            NOTIFICATION & INTEGRATION LAYER               │   │
-│  │                                                          │   │
-│  │  ┌────────────────┐         ┌────────────────────────┐  │   │
-│  │  │  Amazon SNS    │         │   External APIs        │  │   │
-│  │  │  (SMS Gateway) │         │  - IRCTC (mock/real)   │  │   │
-│  │  │  - Confirmations│        │  - UIDAI               │  │   │
-│  │  │  - OTP delivery │        │  - Gov portals         │  │   │
-│  │  └────────────────┘         └────────────────────────┘  │   │
-│  └──────────────────────────────────────────────────────────┘   │
-│                                                                   │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │              MONITORING & LOGGING                         │   │
-│  │                                                          │   │
-│  │  ┌────────────────┐         ┌────────────────────────┐  │   │
-│  │  │  CloudWatch    │         │   X-Ray (Tracing)      │  │   │
-│  │  │  - Logs        │         │  - Performance         │  │   │
-│  │  │  - Metrics     │         │  - Debugging           │  │   │
-│  │  │  - Alarms      │         └────────────────────────┘  │   │
-│  │  └────────────────┘                                      │   │
-│  └──────────────────────────────────────────────────────────┘   │
-└───────────────────────────────────────────────────────────────────┘
+HACKATHON TIMELINE: 48 HOURS
+
+┌─────────────────────────────────────────────────────┐
+│ PHASE 1: Foundation (Hours 0-12)                    │
+└─────────────────────────────────────────────────────┘
+
+Hour 0-2: Setup & Planning
+├── AWS Account Setup
+│   ├── Create/verify AWS accounts for all members
+│   ├── Enable required services (Connect, Bedrock, etc.)
+│   └── Create IAM roles and policies
+├── Development Environment
+│   ├── Install AWS CLI, SAM CLI, Python 3.11
+│   ├── Setup Git repository
+│   └── Configure VS Code / IDE
+└── Architecture Review
+    ├── Team walkthrough of system design
+    ├── Assign specific components to members
+    └── Setup communication channels
+
+Hour 2-4: Amazon Connect IVR Setup
+├── Create Connect Instance
+│   ├── Instance alias: bharatvani-dev
+│   ├── Claim toll-free number (or use test number)
+│   └── Configure hours of operation
+├── Build Main Contact Flow
+│   ├── Welcome message
+│   ├── Language selection (Hindi/English)
+│   ├── Main menu (DTMF: 1,2,3)
+│   └── Lambda integration points
+└── Test Basic Call Flow
+    └── Make test call, verify IVR works
+
+Hour 4-6: DynamoDB Tables Setup
+├── Create Tables
+│   ├── bharatvani-sessions
+│   ├── bharatvani-bookings
+│   └── bharatvani-users
+├── Define Schemas
+│   └── Add sample data for testing
+└── Create Access Policies
+    └── IAM roles for Lambda access
+
+Hour 6-8: Session Manager Lambda
+├── Create Lambda Function
+│   ├── Runtime: Python 3.11
+│   ├── Handler: session_manager.lambda_handler
+│   └── Configure environment variables
+├── Implement Core Functions
+│   ├── create_session()
+│   ├── get_session()
+│   ├── update_session()
+│   └── close_session()
+└── Test with Sample Events
+    └── Verify DynamoDB read/write
+
+Hour 8-10: Bedrock Integration
+├── Enable Bedrock Access
+│   ├── Request model access (Claude 3.5 Sonnet)
+│   └── Wait for approval (usually instant)
+├── Create Bedrock Helper Module
+│   ├── bedrock_client.py
+│   ├── Intent extraction function
+│   └── Response generation function
+└── Test Bedrock Calls
+    └── Verify natural language understanding
+
+Hour 10-12: Polly Integration
+├── Create Polly Helper Module
+│   ├── polly_client.py
+│   ├── SSML template system
+│   └── Voice caching (optional)
+└── Test Voice Generation
+    ├── Generate Hindi speech
+    ├── Generate English speech
+    └── Verify audio quality
+
+┌─────────────────────────────────────────────────────┐
+│ PHASE 2: Railway Booking (Hours 12-24)              │
+└─────────────────────────────────────────────────────┘
+
+Hour 12-14: Railway Booking Lambda
+├── Create Lambda Function
+│   └── railway_booking_handler.py
+├── Implement State Machine
+│   ├── BookingStateMachine class
+│   ├── State transition logic
+│   └── Context management
+└── Mock IRCTC API Client
+    ├── search_trains()
+    ├── check_availability()
+    └── book_ticket()
+
+Hour 14-16: Booking Conversation Flow
+├── Implement Dialog Management
+│   ├── Source station collection
+│   ├── Destination collection
+│   ├── Date parsing (natural language)
+│   ├── Train selection
+│   └── Passenger details
+└── Test Each State
+    └── Unit tests for state transitions
+
+Hour 16-18: Connect Integration
+├── Update Contact Flow
+│   ├── Add railway booking branch
+│   ├── Connect to Lambda functions
+│   ├── Add error handling
+│   └── Add retry logic
+└── Test End-to-End
+    ├── Make test call
+    ├── Complete booking flow
+    └── Verify SMS delivery
+
+Hour 18-20: SNS SMS Integration
+├── Configure SNS
+│   ├── Setup SMS sending
+│   ├── Create message templates
+│   └── Configure sender ID
+├── Implement SMS Sender
+│   └── send_booking_confirmation()
+└── Test SMS Delivery
+    └── Verify messages received
+
+Hour 20-22: Polishing & Bug Fixes
+├── Error Handling
+│   ├── Add try-catch blocks
+│   ├── Graceful degradation
+│   └── User-friendly error messages
+├── Logging
+│   ├── Add CloudWatch logs
+│   ├── Log all state transitions
+│   └── Log external API calls
+└── Testing
+    ├── Happy path testing
+    ├── Error scenario testing
+    └── Edge case testing
+
+Hour 22-24: Data Persistence
+├── Save Complete Bookings
+│   └── Write to DynamoDB bookings table
+├── Update User Profiles
+│   └── Track booking history
+└── Session Cleanup
+    └── Implement TTL for old sessions
+
+┌─────────────────────────────────────────────────────┐
+│ PHASE 3: Additional Services (Hours 24-36)          │
+└─────────────────────────────────────────────────────┘
+
+Hour 24-28: Government Schemes (Optional)
+├── Create Schemes Lambda
+├── Load Schemes Database
+├── Implement Eligibility Check
+└── Build Conversation Flow
+
+Hour 28-32: Aadhaar Services (Optional)
+├── Create Aadhaar Lambda
+├── Mock UIDAI Client
+├── Implement Download Link Generation
+└── Build Conversation Flow
+
+Hour 32-36: Testing & Refinement
+├── Integration Testing
+│   ├── Test all services
+│   ├── Test language switching
+│   └── Test error recovery
+├── Performance Testing
+│   ├── Lambda cold start times
+│   ├── Response latency
+│   └── Database query performance
+└── User Experience Testing
+    ├── Call flow smoothness
+    ├── Voice clarity
+    └── Response appropriateness
+
+┌─────────────────────────────────────────────────────┐
+│ PHASE 4: Presentation (Hours 36-48)                 │
+└─────────────────────────────────────────────────────┘
+
+Hour 36-40: Build Presentation
+├── Create Pitch Deck
+│   ├── Problem statement
+│   ├── Solution overview
+│   ├── Live demo plan
+│   ├── Technical architecture
+│   ├── Business model
+│   └── Impact metrics
+├── Prepare Demo Script
+│   ├── Write exact dialogue
+│   ├── Practice timing
+│   └── Prepare backup scenarios
+└── Create Architecture Diagrams
+    └── Visual system overview
+
+Hour 40-44: Demo Preparation
+├── Setup Demo Environment
+│   ├── Test phone with good signal
+│   ├── Backup phone ready
+│   ├── Speaker setup
+│   └── Screen recording ready
+├── Practice Demo
+│   ├── Multiple run-throughs
+│   ├── Time the demo (< 3 minutes)
+│   ├── Practice failure recovery
+│   └── Prepare for interruptions
+└── Prepare Q&A
+    ├── Anticipated questions list
+    ├── Answers for each
+    └── Team member assignments
+
+Hour 44-46: Final Testing & Polish
+├── End-to-End Testing
+│   ├── Complete booking flow
+│   ├── SMS delivery
+│   ├── Error handling
+│   └── Edge cases
+├── Documentation
+│   ├── README.md
+│   ├── API documentation
+│   └── Setup instructions
+└── Code Cleanup
+    ├── Remove debug code
+    ├── Add comments
+    └── Code formatting
+
+Hour 46-48: Presentation Practice
+├── Full Rehearsal
+│   ├── Pitch + Demo (5 min total)
+│   ├── Q&A practice (5 min)
+│   └── Timing adjustments
+├── Team Alignment
+│   ├── Who presents what
+│   ├── Who handles demo
+│   └── Who answers questions
+└── Final Checks
+    ├── All systems operational
+    ├── Backup plans ready
+    └── Confidence building
 ```
 
 ---
 
-## 2. AWS Services Integration
+## 8. Complete Code Examples
 
-### 2.1 Amazon Connect Configuration
-
-**Purpose:** IVR system for handling phone calls
-
-**Setup Steps:**
-
-```yaml
-# Amazon Connect Instance Configuration
-instance_alias: "bharatvani-prod"
-identity_management: "CONNECT_MANAGED"
-inbound_calls: true
-outbound_calls: false
-contact_flow_logs: true
-
-# Phone Number Configuration
-toll_free_number: "1800-XXX-XXXX"
-country_code: "+91"
-type: "TOLL_FREE"
-
-# Hours of Operation
-operating_hours:
-  - name: "24x7 Support"
-    timezone: "Asia/Kolkata"
-    schedule: "Always Open"
-
-# Contact Flow
-main_contact_flow:
-  name: "BharatVani_Main_Flow"
-  type: "CONTACT_FLOW"
-  description: "Primary entry point for all calls"
-```
-
-**Key Features Used:**
-- Contact Flows (visual IVR builder)
-- Lambda integration points
-- DTMF input collection
-- Voice input (using Lex integration)
-- Call recording (optional)
-- Real-time metrics
-
----
-
-### 2.2 Amazon Bedrock (Claude 3.5 Sonnet)
-
-**Purpose:** AI brain for understanding conversations
-
-**Configuration:**
+### 8.1 Session Manager Lambda
 
 ```python
-# bedrock_config.py
+# lambda_functions/session_manager/handler.py
 
-BEDROCK_CONFIG = {
-    "model_id": "anthropic.claude-3-5-sonnet-20241022-v2:0",
-    "region": "us-east-1",
-    
-    "inference_params": {
-        "max_tokens": 1000,
-        "temperature": 0.7,
-        "top_p": 0.9,
-        "top_k": 250
-    },
-    
-    "system_prompt": """You are BharatVani, a helpful voice assistant for Indian citizens.
-
-Your role:
-- Help users access digital services via phone
-- Speak naturally in their language (Hindi, English, etc.)
-- Be patient and explain things simply
-- Handle multi-turn conversations
-- Extract structured information from natural speech
-
-Guidelines:
-- Always be polite and respectful
-- Use simple language (8th grade reading level)
-- Confirm understanding before proceeding
-- If unsure, ask clarifying questions
-- Keep responses under 30 words for voice delivery
-
-Current context: {context}
-User's language preference: {language}
-Current service: {service_type}
-"""
-}
-```
-
-**API Call Pattern:**
-
-```python
 import boto3
 import json
-
-bedrock = boto3.client(
-    service_name='bedrock-runtime',
-    region_name='us-east-1'
-)
-
-def call_bedrock(user_message, context, language="hindi"):
-    """
-    Call Bedrock API with conversation context
-    """
-    
-    # Build system prompt with context
-    system_prompt = BEDROCK_CONFIG["system_prompt"].format(
-        context=json.dumps(context),
-        language=language,
-        service_type=context.get('service', 'general')
-    )
-    
-    # Prepare request
-    request_body = {
-        "anthropic_version": "bedrock-2023-05-31",
-        "max_tokens": BEDROCK_CONFIG["inference_params"]["max_tokens"],
-        "temperature": BEDROCK_CONFIG["inference_params"]["temperature"],
-        "messages": [
-            {
-                "role": "user",
-                "content": user_message
-            }
-        ],
-        "system": system_prompt
-    }
-    
-    # Call API
-    response = bedrock.invoke_model(
-        modelId=BEDROCK_CONFIG["model_id"],
-        body=json.dumps(request_body)
-    )
-    
-    # Parse response
-    response_body = json.loads(response['body'].read())
-    
-    return response_body['content'][0]['text']
-```
-
----
-
-### 2.3 Amazon Transcribe
-
-**Purpose:** Convert voice to text
-
-**Configuration:**
-
-```python
-# transcribe_config.py
-
-TRANSCRIBE_CONFIG = {
-    "languages": {
-        "hindi": {
-            "language_code": "hi-IN",
-            "vocabulary_name": "bharatvani-hindi-vocab",
-            "custom_vocab": [
-                "IRCTC", "PNR", "Aadhaar", "PM-KISAN",
-                "tatkal", "sleeper", "AC", "general"
-            ]
-        },
-        "english": {
-            "language_code": "en-IN",
-            "vocabulary_name": "bharatvani-english-vocab",
-            "custom_vocab": [
-                "IRCTC", "PNR", "Aadhaar", "UPI"
-            ]
-        },
-        "tamil": {
-            "language_code": "ta-IN"
-        }
-    },
-    
-    "settings": {
-        "enable_speaker_diarization": False,
-        "max_speaker_labels": 1,
-        "show_alternatives": 3,
-        "vocabulary_filter_method": "mask"
-    }
-}
-```
-
-**Streaming Transcription:**
-
-```python
-import boto3
-from amazon_transcribe.client import TranscribeStreamingClient
-from amazon_transcribe.handlers import TranscriptResultStreamHandler
-from amazon_transcribe.model import TranscriptEvent
-
-class BharatVaniTranscriptHandler(TranscriptResultStreamHandler):
-    """
-    Handler for real-time transcription events
-    """
-    
-    def __init__(self, output_stream):
-        super().__init__(output_stream)
-        self.transcript_parts = []
-    
-    async def handle_transcript_event(self, transcript_event: TranscriptEvent):
-        """
-        Process each transcription event
-        """
-        results = transcript_event.transcript.results
-        
-        for result in results:
-            if not result.is_partial:
-                # Final transcript
-                for alt in result.alternatives:
-                    transcript = alt.transcript
-                    confidence = alt.confidence
-                    
-                    self.transcript_parts.append({
-                        'text': transcript,
-                        'confidence': confidence,
-                        'timestamp': result.start_time
-                    })
-                    
-                    # Trigger intent processing
-                    await self.process_intent(transcript)
-    
-    async def process_intent(self, transcript):
-        """
-        Send transcript to Bedrock for intent extraction
-        """
-        # This would integrate with your Lambda function
-        pass
-
-async def start_transcription_stream(audio_stream, language="hi-IN"):
-    """
-    Start streaming transcription
-    """
-    client = TranscribeStreamingClient(region="us-east-1")
-    
-    stream = await client.start_stream_transcription(
-        language_code=language,
-        media_sample_rate_hz=8000,  # Phone quality
-        media_encoding="pcm",
-        vocabulary_name=TRANSCRIBE_CONFIG["languages"]["hindi"]["vocabulary_name"]
-    )
-    
-    handler = BharatVaniTranscriptHandler(stream.output_stream)
-    
-    await asyncio.gather(
-        write_audio_chunks(stream, audio_stream),
-        handler.handle_events()
-    )
-```
-
----
-
-### 2.4 Amazon Polly
-
-**Purpose:** Convert text to natural speech
-
-**Configuration:**
-
-```python
-# polly_config.py
-
-POLLY_CONFIG = {
-    "voices": {
-        "hindi": {
-            "voice_id": "Aditi",
-            "language_code": "hi-IN",
-            "engine": "neural"  # More natural
-        },
-        "english": {
-            "voice_id": "Raveena",
-            "language_code": "en-IN",
-            "engine": "neural"
-        },
-        "tamil": {
-            "voice_id": "TBD",  # Check available voices
-            "language_code": "ta-IN",
-            "engine": "standard"
-        }
-    },
-    
-    "speech_params": {
-        "output_format": "mp3",
-        "sample_rate": "8000",  # Phone quality
-        "text_type": "ssml"  # For better control
-    }
-}
-```
-
-**SSML Templates:**
-
-```python
-SSML_TEMPLATES = {
-    "greeting": """
-        <speak>
-            <prosody rate="medium" pitch="medium">
-                {text}
-            </prosody>
-        </speak>
-    """,
-    
-    "confirmation": """
-        <speak>
-            <prosody rate="slow" pitch="+10%">
-                <emphasis level="strong">{text}</emphasis>
-            </prosody>
-        </speak>
-    """,
-    
-    "question": """
-        <speak>
-            <prosody rate="medium" pitch="+5%">
-                {text}
-                <break time="500ms"/>
-            </prosody>
-        </speak>
-    """,
-    
-    "error": """
-        <speak>
-            <prosody rate="slow" pitch="-5%">
-                {text}
-            </prosody>
-        </speak>
-    """
-}
-
-def generate_speech(text, language="hindi", template="greeting"):
-    """
-    Generate natural speech with SSML
-    """
-    polly = boto3.client('polly', region_name='us-east-1')
-    
-    voice_config = POLLY_CONFIG["voices"][language]
-    
-    # Apply SSML template
-    ssml_text = SSML_TEMPLATES[template].format(text=text)
-    
-    response = polly.synthesize_speech(
-        Text=ssml_text,
-        TextType='ssml',
-        VoiceId=voice_config["voice_id"],
-        Engine=voice_config["engine"],
-        OutputFormat=POLLY_CONFIG["speech_params"]["output_format"],
-        SampleRate=POLLY_CONFIG["speech_params"]["sample_rate"]
-    )
-    
-    return response['AudioStream'].read()
-```
-
----
-
-### 2.5 AWS Lambda Functions
-
-**Purpose:** Business logic execution
-
-**Function Structure:**
-
-```
-lambda_functions/
-├── session_manager/
-│   ├── handler.py
-│   ├── requirements.txt
-│   └── config.py
-├── railway_booking/
-│   ├── handler.py
-│   ├── irctc_client.py
-│   ├── requirements.txt
-│   └── config.py
-├── government_schemes/
-│   ├── handler.py
-│   ├── eligibility_engine.py
-│   ├── requirements.txt
-│   └── config.py
-├── aadhaar_services/
-│   ├── handler.py
-│   ├── uidai_client.py
-│   ├── requirements.txt
-│   └── config.py
-└── common/
-    ├── bedrock_client.py
-    ├── dynamodb_helper.py
-    ├── polly_client.py
-    └── utils.py
-```
-
-**Lambda Configuration:**
-
-```yaml
-# lambda_config.yaml
-
-session_manager:
-  runtime: python3.11
-  timeout: 30
-  memory: 512
-  environment:
-    SESSION_TABLE: bharatvani-sessions
-    REGION: us-east-1
-
-railway_booking:
-  runtime: python3.11
-  timeout: 60
-  memory: 1024
-  environment:
-    BOOKINGS_TABLE: bharatvani-bookings
-    IRCTC_API_URL: https://api.irctc.co.in  # Mock for MVP
-    REGION: us-east-1
-
-government_schemes:
-  runtime: python3.11
-  timeout: 45
-  memory: 512
-  environment:
-    SCHEMES_TABLE: bharatvani-schemes
-    REGION: us-east-1
-
-aadhaar_services:
-  runtime: python3.11
-  timeout: 60
-  memory: 512
-  environment:
-    UIDAI_API_URL: https://api.uidai.gov.in  # Mock for MVP
-    REGION: us-east-1
-```
-
----
-
-### 2.6 Amazon DynamoDB
-
-**Purpose:** NoSQL database for sessions, bookings, users
-
-**Table Schemas:**
-
-```python
-# dynamodb_schemas.py
-
-SESSIONS_TABLE = {
-    "TableName": "bharatvani-sessions",
-    "KeySchema": [
-        {"AttributeName": "session_id", "KeyType": "HASH"}
-    ],
-    "AttributeDefinitions": [
-        {"AttributeName": "session_id", "AttributeType": "S"},
-        {"AttributeName": "phone_number", "AttributeType": "S"},
-        {"AttributeName": "created_at", "AttributeType": "N"}
-    ],
-    "GlobalSecondaryIndexes": [
-        {
-            "IndexName": "phone-number-index",
-            "KeySchema": [
-                {"AttributeName": "phone_number", "KeyType": "HASH"},
-                {"AttributeName": "created_at", "KeyType": "RANGE"}
-            ],
-            "Projection": {"ProjectionType": "ALL"}
-        }
-    ],
-    "BillingMode": "PAY_PER_REQUEST",
-    "Tags": [
-        {"Key": "Project", "Value": "BharatVani"},
-        {"Key": "Environment", "Value": "Production"}
-    ]
-}
-
-BOOKINGS_TABLE = {
-    "TableName": "bharatvani-bookings",
-    "KeySchema": [
-        {"AttributeName": "booking_id", "KeyType": "HASH"}
-    ],
-    "AttributeDefinitions": [
-        {"AttributeName": "booking_id", "AttributeType": "S"},
-        {"AttributeName": "phone_number", "AttributeType": "S"},
-        {"AttributeName": "booking_date", "AttributeType": "N"}
-    ],
-    "GlobalSecondaryIndexes": [
-        {
-            "IndexName": "phone-booking-index",
-            "KeySchema": [
-                {"AttributeName": "phone_number", "KeyType": "HASH"},
-                {"AttributeName": "booking_date", "KeyType": "RANGE"}
-            ],
-            "Projection": {"ProjectionType": "ALL"}
-        }
-    ],
-    "BillingMode": "PAY_PER_REQUEST"
-}
-
-USERS_TABLE = {
-    "TableName": "bharatvani-users",
-    "KeySchema": [
-        {"AttributeName": "phone_number", "KeyType": "HASH"}
-    ],
-    "AttributeDefinitions": [
-        {"AttributeName": "phone_number", "AttributeType": "S"}
-    ],
-    "BillingMode": "PAY_PER_REQUEST"
-}
-```
-
----
-
-### 2.7 Amazon SNS
-
-**Purpose:** SMS notifications
-
-**Configuration:**
-
-```python
-# sns_config.py
-
-SNS_CONFIG = {
-    "region": "ap-south-1",  # Mumbai region for India
-    "sender_id": "BHRVANI",  # 6-char alphanumeric
-    "sms_type": "Transactional",
-    
-    "templates": {
-        "booking_confirmation": {
-            "hindi": "Ticket book ho gayi! PNR: {pnr}. Train: {train_name}. Date: {date}. Seat: {seat}. - BharatVani",
-            "english": "Ticket booked! PNR: {pnr}. Train: {train_name}. Date: {date}. Seat: {seat}. - BharatVani"
-        },
-        "scheme_application": {
-            "hindi": "Aapka {scheme_name} application submit ho gaya. Reference: {ref_number}. Status check karein: 1800-XXX-XXXX - BharatVani",
-            "english": "Your {scheme_name} application submitted. Reference: {ref_number}. Check status: 1800-XXX-XXXX - BharatVani"
-        },
-        "aadhaar_download": {
-            "hindi": "Aapka Aadhaar download link: {download_url}. Valid for 24 hours. - BharatVani",
-            "english": "Your Aadhaar download link: {download_url}. Valid for 24 hours. - BharatVani"
-        }
-    }
-}
-
-def send_sms(phone_number, template_name, language, **kwargs):
-    """
-    Send SMS using SNS
-    """
-    sns = boto3.client('sns', region_name=SNS_CONFIG["region"])
-    
-    # Get template
-    template = SNS_CONFIG["templates"][template_name][language]
-    message = template.format(**kwargs)
-    
-    response = sns.publish(
-        PhoneNumber=phone_number,
-        Message=message,
-        MessageAttributes={
-            'AWS.SNS.SMS.SenderID': {
-                'DataType': 'String',
-                'StringValue': SNS_CONFIG["sender_id"]
-            },
-            'AWS.SNS.SMS.SMSType': {
-                'DataType': 'String',
-                'StringValue': SNS_CONFIG["sms_type"]
-            }
-        }
-    )
-    
-    return response['MessageId']
-```
-
----
-
-## 3. Data Pipeline & Flow
-
-### 3.1 Complete Call Flow Diagram
-
-```
-USER CALLS
-    │
-    ▼
-┌─────────────────────────────────────────────────────┐
-│ Amazon Connect: Answer Call                         │
-│ - Play welcome message (Polly)                      │
-│ - Detect language preference                        │
-└───────────────────┬─────────────────────────────────┘
-                    │
-                    ▼
-┌─────────────────────────────────────────────────────┐
-│ Lambda: session_manager                             │
-│ - Create/retrieve session                           │
-│ - Load user profile (if exists)                     │
-│ - Initialize conversation context                   │
-└───────────────────┬─────────────────────────────────┘
-                    │
-                    ▼
-┌─────────────────────────────────────────────────────┐
-│ Amazon Connect: Main Menu                           │
-│ - Present service options (DTMF/Voice)             │
-│ - Collect user choice                              │
-└───────────────────┬─────────────────────────────────┘
-                    │
-         ┌──────────┴──────────┬─────────────┐
-         │                     │             │
-         ▼                     ▼             ▼
-    [Railway]           [Gov Schemes]   [Aadhaar]
-         │                     │             │
-         │                     │             │
-         ▼                     ▼             ▼
-┌──────────────────┐  ┌──────────────┐  ┌────────────┐
-│ Lambda:          │  │ Lambda:       │  │ Lambda:    │
-│ railway_booking  │  │ gov_schemes   │  │ aadhaar    │
-└────────┬─────────┘  └──────┬───────┘  └─────┬──────┘
-         │                    │                 │
-         └────────────────────┴─────────────────┘
-                              │
-                              ▼
-         ┌────────────────────────────────────────┐
-         │  Conversation Loop                     │
-         │  ┌──────────────────────────────────┐ │
-         │  │ 1. Transcribe user input         │ │
-         │  │    (Amazon Transcribe)            │ │
-         │  └────────────┬─────────────────────┘ │
-         │               ▼                        │
-         │  ┌──────────────────────────────────┐ │
-         │  │ 2. Extract intent & entities     │ │
-         │  │    (Amazon Bedrock)               │ │
-         │  └────────────┬─────────────────────┘ │
-         │               ▼                        │
-         │  ┌──────────────────────────────────┐ │
-         │  │ 3. Update session state          │ │
-         │  │    (DynamoDB)                     │ │
-         │  └────────────┬─────────────────────┘ │
-         │               ▼                        │
-         │  ┌──────────────────────────────────┐ │
-         │  │ 4. Execute business logic        │ │
-         │  │    (Lambda functions)             │ │
-         │  └────────────┬─────────────────────┘ │
-         │               ▼                        │
-         │  ┌──────────────────────────────────┐ │
-         │  │ 5. Generate response text        │ │
-         │  │    (Amazon Bedrock)               │ │
-         │  └────────────┬─────────────────────┘ │
-         │               ▼                        │
-         │  ┌──────────────────────────────────┐ │
-         │  │ 6. Convert to speech             │ │
-         │  │    (Amazon Polly)                 │ │
-         │  └────────────┬─────────────────────┘ │
-         │               ▼                        │
-         │  ┌──────────────────────────────────┐ │
-         │  │ 7. Play to user                  │ │
-         │  │    (Amazon Connect)               │ │
-         │  └────────────┬─────────────────────┘ │
-         │               │                        │
-         │               └──► More input?         │
-         │                    Yes → Loop          │
-         │                    No  → Continue      │
-         └────────────────────┬───────────────────┘
-                              │
-                              ▼
-              ┌───────────────────────────────┐
-              │ Transaction Complete          │
-              │ - Save to DynamoDB            │
-              │ - Send SMS confirmation (SNS) │
-              │ - End call gracefully         │
-              └───────────────────────────────┘
-```
-
-### 3.2 Data Flow for Railway Booking
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│ STEP 1: User Intent Detection                               │
-│                                                             │
-│ User says: "Mumbai se Delhi ka ticket"                     │
-│      │                                                      │
-│      ▼                                                      │
-│ Transcribe → "mumbai se delhi ka ticket"                   │
-│      │                                                      │
-│      ▼                                                      │
-│ Bedrock extracts:                                          │
-│   {                                                         │
-│     "intent": "book_railway_ticket",                       │
-│     "entities": {                                          │
-│       "source": "Mumbai",                                  │
-│       "destination": "Delhi"                               │
-│     },                                                      │
-│     "missing": ["date", "passenger_details"]              │
-│   }                                                         │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│ STEP 2: Collect Missing Information                         │
-│                                                             │
-│ System asks: "Kab jana hai?"                               │
-│      │                                                      │
-│      ▼                                                      │
-│ User: "Kal"                                                │
-│      │                                                      │
-│      ▼                                                      │
-│ Bedrock parses: "kal" → tomorrow's date                    │
-│      │                                                      │
-│      ▼                                                      │
-│ Update session:                                            │
-│   {                                                         │
-│     "source": "Mumbai",                                    │
-│     "destination": "Delhi",                                │
-│     "date": "2026-02-16"                                   │
-│   }                                                         │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│ STEP 3: Search Trains                                       │
-│                                                             │
-│ Lambda calls IRCTC API (or mock):                          │
-│   GET /search?from=BOM&to=NDLS&date=2026-02-16            │
-│      │                                                      │
-│      ▼                                                      │
-│ Response:                                                   │
-│   [                                                         │
-│     {                                                       │
-│       "train_number": "12301",                             │
-│       "name": "Rajdhani Express",                          │
-│       "departure": "06:00",                                │
-│       "arrival": "10:30",                                  │
-│       "classes": [                                         │
-│         {"type": "3AC", "price": 2500, "available": 45},  │
-│         {"type": "2AC", "price": 3500, "available": 20}   │
-│       ]                                                     │
-│     },                                                      │
-│     {...more trains...}                                    │
-│   ]                                                         │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│ STEP 4: Present Options                                     │
-│                                                             │
-│ Bedrock generates natural response:                        │
-│   "3 trains milein:                                        │
-│    1. Rajdhani - subah 6 baje - ₹2500                      │
-│    2. Duronto - subah 9 baje - ₹2200                       │
-│    3. Express - dopahar 12 baje - ₹1800"                   │
-│      │                                                      │
-│      ▼                                                      │
-│ Polly converts to speech                                   │
-│      │                                                      │
-│      ▼                                                      │
-│ User hears and selects: "Ek" (one)                         │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│ STEP 5: Collect Passenger Details                          │
-│                                                             │
-│ Ask: "Naam?"        → "Ramesh Kumar"                       │
-│ Ask: "Umra?"        → "55"                                 │
-│ Ask: "Seat?"        → "Window"                             │
-│      │                                                      │
-│      ▼                                                      │
-│ Session updated:                                           │
-│   {                                                         │
-│     "train": "12301",                                      │
-│     "passenger": {                                         │
-│       "name": "Ramesh Kumar",                             │
-│       "age": 55,                                           │
-│       "seat_preference": "window"                         │
-│     }                                                       │
-│   }                                                         │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│ STEP 6: Confirmation                                        │
-│                                                             │
-│ Generate summary:                                          │
-│   "Confirm karein:                                         │
-│    Train: Rajdhani Express                                 │
-│    Date: 16 Feb 2026                                       │
-│    Mumbai to Delhi                                         │
-│    Passenger: Ramesh Kumar, 55 years                       │
-│    Price: ₹2500                                            │
-│    Sahi hai?"                                              │
-│      │                                                      │
-│      ▼                                                      │
-│ User: "Haan, sahi hai"                                     │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│ STEP 7: Process Booking                                     │
-│                                                             │
-│ Lambda calls IRCTC booking API:                            │
-│   POST /book                                               │
-│   {                                                         │
-│     "train_number": "12301",                               │
-│     "date": "2026-02-16",                                  │
-│     "passengers": [...],                                   │
-│     "contact": "+919876543210"                             │
-│   }                                                         │
-│      │                                                      │
-│      ▼                                                      │
-│ Response:                                                   │
-│   {                                                         │
-│     "status": "confirmed",                                 │
-│     "pnr": "1234567890",                                   │
-│     "seat": "A1, Coach B3"                                 │
-│   }                                                         │
-│      │                                                      │
-│      ▼                                                      │
-│ Save to DynamoDB (bookings table)                          │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│ STEP 8: Send Confirmation                                   │
-│                                                             │
-│ Voice: "Ticket book ho gayi! PNR aapko SMS se mil jayega" │
-│      │                                                      │
-│      ▼                                                      │
-│ SNS sends SMS:                                             │
-│   "Ticket booked! PNR: 1234567890                          │
-│    Train: Rajdhani Express                                 │
-│    Date: 16 Feb 2026                                       │
-│    Seat: A1, Coach B3                                      │
-│    - BharatVani"                                           │
-│      │                                                      │
-│      ▼                                                      │
-│ End call gracefully                                        │
-└─────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 4. Database Schema
-
-### 4.1 Sessions Table
-
-```python
-# Session document structure
-
-{
-    "session_id": "sess_20260215_123456",  # Primary Key
-    "phone_number": "+919876543210",       # GSI Hash Key
-    "created_at": 1708012345,              # GSI Range Key (unix timestamp)
-    "updated_at": 1708012567,
-    
-    "user_profile": {
-        "name": "Ramesh Kumar",
-        "language": "hindi",
-        "location": "Bihar"
-    },
-    
-    "conversation_state": {
-        "current_service": "railway_booking",
-        "state": "waiting_train_selection",
-        "context": {
-            "source": "Mumbai",
-            "destination": "Delhi",
-            "date": "2026-02-16",
-            "available_trains": [...],
-            "conversation_history": [
-                {
-                    "speaker": "user",
-                    "text": "Mumbai se Delhi",
-                    "timestamp": 1708012345
-                },
-                {
-                    "speaker": "system",
-                    "text": "Kab jana hai?",
-                    "timestamp": 1708012346
-                }
-            ]
-        }
-    },
-    
-    "metadata": {
-        "call_id": "conn_abc123",
-        "call_duration": 120,  # seconds
-        "ip_address": "203.0.113.45"
-    },
-    
-    "ttl": 1708098745  # Auto-delete after 24 hours
-}
-```
-
-### 4.2 Bookings Table
-
-```python
-# Booking document structure
-
-{
-    "booking_id": "bk_20260215_789012",    # Primary Key
-    "phone_number": "+919876543210",       # GSI Hash Key
-    "booking_date": 1708012345,            # GSI Range Key
-    
-    "booking_type": "railway_ticket",
-    
-    "booking_details": {
-        "pnr": "1234567890",
-        "train_number": "12301",
-        "train_name": "Rajdhani Express",
-        "journey_date": "2026-02-16",
-        "source": "Mumbai Central (BOM)",
-        "destination": "New Delhi (NDLS)",
-        "departure_time": "06:00",
-        "arrival_time": "10:30",
-        
-        "passengers": [
-            {
-                "name": "Ramesh Kumar",
-                "age": 55,
-                "gender": "M",
-                "seat": "A1",
-                "coach": "B3",
-                "berth": "Lower"
-            }
-        ],
-        
-        "fare": {
-            "base_fare": 2500,
-            "taxes": 50,
-            "total": 2550,
-            "currency": "INR"
-        },
-        
-        "status": "confirmed",
-        "booking_time": 1708012345
-    },
-    
-    "communication": {
-        "sms_sent": true,
-        "sms_id": "msg_xyz789",
-        "confirmation_sent_at": 1708012350
-    },
-    
-    "session_id": "sess_20260215_123456",
-    
-    "created_at": 1708012345,
-    "updated_at": 1708012345
-}
-```
-
-### 4.3 Users Table
-
-```python
-# User profile document
-
-{
-    "phone_number": "+919876543210",  # Primary Key
-    
-    "profile": {
-        "name": "Ramesh Kumar",
-        "age": 55,
-        "gender": "M",
-        "language_preference": "hindi",
-        "location": {
-            "state": "Bihar",
-            "district": "Patna",
-            "village": "Rampur"
-        }
-    },
-    
-    "preferences": {
-        "default_train_class": "3AC",
-        "seat_preference": "window",
-        "meal_preference": "veg"
-    },
-    
-    "statistics": {
-        "total_calls": 15,
-        "total_bookings": 8,
-        "successful_transactions": 12,
-        "last_call_date": 1708012345,
-        "favorite_services": ["railway_booking", "pm_kisan"]
-    },
-    
-    "linked_accounts": {
-        "aadhaar": "1234-5678-9012",
-        "pan": "ABCDE1234F",
-        "bank_account": "1234567890"
-    },
-    
-    "created_at": 1705420345,
-    "updated_at": 1708012345
-}
-```
-
----
-
-## 5. API Architecture
-
-### 5.1 Internal API Structure
-
-```python
-# api_structure.py
-
-"""
-BharatVani Internal API Structure
-
-Base URL: Internal (Lambda to Lambda communication)
-Protocol: Synchronous invocation via boto3
-"""
-
-# Session Management API
-class SessionAPI:
-    """
-    Manages user sessions across calls
-    """
-    
-    @staticmethod
-    def create_session(phone_number, language="hindi"):
-        """
-        POST /session/create
-        """
-        pass
-    
-    @staticmethod
-    def get_session(session_id):
-        """
-        GET /session/{session_id}
-        """
-        pass
-    
-    @staticmethod
-    def update_session(session_id, updates):
-        """
-        PUT /session/{session_id}
-        """
-        pass
-    
-    @staticmethod
-    def close_session(session_id):
-        """
-        DELETE /session/{session_id}
-        """
-        pass
-
-
-# Railway Booking API
-class RailwayAPI:
-    """
-    Railway ticket booking interface
-    """
-    
-    @staticmethod
-    def search_trains(source, destination, date):
-        """
-        GET /railway/search
-        
-        Query params:
-        - source: Station code (e.g., "BOM")
-        - destination: Station code (e.g., "NDLS")
-        - date: Journey date (YYYY-MM-DD)
-        
-        Returns: List of available trains
-        """
-        pass
-    
-    @staticmethod
-    def check_availability(train_number, date, class_type):
-        """
-        GET /railway/availability
-        """
-        pass
-    
-    @staticmethod
-    def book_ticket(booking_request):
-        """
-        POST /railway/book
-        
-        Body:
-        {
-            "train_number": "12301",
-            "date": "2026-02-16",
-            "class": "3AC",
-            "passengers": [...],
-            "contact": "+919876543210"
-        }
-        """
-        pass
-    
-    @staticmethod
-    def get_pnr_status(pnr):
-        """
-        GET /railway/pnr/{pnr}
-        """
-        pass
-
-
-# Government Schemes API
-class GovernmentSchemesAPI:
-    """
-    Government schemes eligibility and application
-    """
-    
-    @staticmethod
-    def list_schemes(category=None):
-        """
-        GET /schemes/list
-        """
-        pass
-    
-    @staticmethod
-    def check_eligibility(phone_number, scheme_id):
-        """
-        POST /schemes/eligibility
-        """
-        pass
-    
-    @staticmethod
-    def get_scheme_details(scheme_id):
-        """
-        GET /schemes/{scheme_id}
-        """
-        pass
-    
-    @staticmethod
-    def apply_for_scheme(application_data):
-        """
-        POST /schemes/apply
-        """
-        pass
-
-
-# Aadhaar Services API
-class AadhaarAPI:
-    """
-    Aadhaar-related services
-    """
-    
-    @staticmethod
-    def verify_aadhaar(aadhaar_number):
-        """
-        POST /aadhaar/verify
-        """
-        pass
-    
-    @staticmethod
-    def generate_download_link(aadhaar_number):
-        """
-        POST /aadhaar/download-link
-        """
-        pass
-    
-    @staticmethod
-    def update_mobile(aadhaar_number, new_mobile):
-        """
-        POST /aadhaar/update-mobile
-        """
-        pass
-```
-
-### 5.2 External API Integrations
-
-```python
-# external_apis.py
-
-"""
-External API Integration Layer
-Handles communication with IRCTC, UIDAI, Government portals
-"""
-
-import requests
-from typing import Dict, List, Optional
-
-class IRCTCClient:
-    """
-    IRCTC API Client
-    
-    For MVP: Use mock responses
-    For Production: Integrate with actual IRCTC API
-    """
-    
-    BASE_URL = "https://api.irctc.co.in/v1"  # Mock URL
-    
-    def __init__(self, api_key: str):
-        self.api_key = api_key
-        self.session = requests.Session()
-        self.session.headers.update({
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        })
-    
-    def search_trains(
-        self,
-        source_station: str,
-        dest_station: str,
-        journey_date: str
-    ) -> List[Dict]:
-        """
-        Search for trains between stations
-        
-        Args:
-            source_station: Source station code (e.g., "NDLS")
-            dest_station: Destination station code (e.g., "BOM")
-            journey_date: Journey date in YYYY-MM-DD format
-        
-        Returns:
-            List of train objects
-        """
-        
-        # For MVP - return mock data
-        return self._mock_train_search(source_station, dest_station, journey_date)
-    
-    def _mock_train_search(self, source, dest, date):
-        """
-        Mock train search response for MVP
-        """
-        return [
-            {
-                "train_number": "12301",
-                "train_name": "Howrah Rajdhani",
-                "source_station": source,
-                "dest_station": dest,
-                "departure_time": "06:00",
-                "arrival_time": "10:30",
-                "duration": "4:30",
-                "available_classes": [
-                    {
-                        "class_type": "3AC",
-                        "available_seats": 45,
-                        "fare": 2500,
-                        "status": "AVAILABLE"
-                    },
-                    {
-                        "class_type": "2AC",
-                        "available_seats": 20,
-                        "fare": 3500,
-                        "status": "AVAILABLE"
-                    }
-                ],
-                "days_of_operation": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-            },
-            {
-                "train_number": "12951",
-                "train_name": "Mumbai Rajdhani",
-                "source_station": source,
-                "dest_station": dest,
-                "departure_time": "09:00",
-                "arrival_time": "13:45",
-                "duration": "4:45",
-                "available_classes": [
-                    {
-                        "class_type": "3AC",
-                        "available_seats": 30,
-                        "fare": 2200,
-                        "status": "AVAILABLE"
-                    }
-                ],
-                "days_of_operation": ["Mon", "Wed", "Fri", "Sun"]
-            }
-        ]
-    
-    def book_ticket(self, booking_data: Dict) -> Dict:
-        """
-        Book railway ticket
-        
-        Returns:
-            Booking confirmation with PNR
-        """
-        
-        # For MVP - return mock booking
-        import random
-        
-        return {
-            "status": "CONFIRMED",
-            "pnr": str(random.randint(1000000000, 9999999999)),
-            "booking_id": f"BK{random.randint(100000, 999999)}",
-            "train_number": booking_data["train_number"],
-            "journey_date": booking_data["journey_date"],
-            "passengers": booking_data["passengers"],
-            "total_fare": booking_data["total_fare"],
-            "seats": [
-                {
-                    "passenger_name": p["name"],
-                    "coach": f"B{random.randint(1, 10)}",
-                    "seat_number": f"{random.choice(['A', 'B', 'C'])}{random.randint(1, 72)}",
-                    "berth": random.choice(["Lower", "Middle", "Upper", "Side Lower", "Side Upper"])
-                }
-                for p in booking_data["passengers"]
-            ]
-        }
-
-
-class UIDAIClient:
-    """
-    UIDAI (Aadhaar) API Client
-    """
-    
-    BASE_URL = "https://api.uidai.gov.in/v1"  # Mock URL
-    
-    def __init__(self, api_key: str):
-        self.api_key = api_key
-    
-    def verify_aadhaar(self, aadhaar_number: str) -> Dict:
-        """
-        Verify Aadhaar number
-        
-        For MVP: Return mock response
-        """
-        return {
-            "valid": True,
-            "aadhaar_number": aadhaar_number,
-            "masked_number": f"XXXX-XXXX-{aadhaar_number[-4:]}"
-        }
-    
-    def generate_download_link(self, aadhaar_number: str) -> Dict:
-        """
-        Generate e-Aadhaar download link
-        """
-        import hashlib
-        import time
-        
-        # Generate mock download link
-        token = hashlib.md5(f"{aadhaar_number}{time.time()}".encode()).hexdigest()
-        
-        return {
-            "download_url": f"https://eaadhaar.uidai.gov.in/download/{token}",
-            "valid_until": int(time.time()) + 86400,  # 24 hours
-            "password": aadhaar_number[-4:] + "YOB"  # Last 4 digits + Year of Birth
-        }
-
-
-class GovernmentPortalClient:
-    """
-    Generic Government Portal API Client
-    """
-    
-    def __init__(self):
-        self.schemes_db = self._load_schemes_database()
-    
-    def _load_schemes_database(self) -> Dict:
-        """
-        Load government schemes database
-        
-        For MVP: Return static data
-        For Production: Integrate with actual government APIs
-        """
-        return {
-            "pm_kisan": {
-                "id": "pm_kisan",
-                "name": "PM-KISAN",
-                "full_name": "Pradhan Mantri Kisan Samman Nidhi",
-                "description": "Financial support to farmers",
-                "benefit_amount": 6000,
-                "benefit_frequency": "yearly",
-                "eligibility": {
-                    "occupation": "farmer",
-                    "land_ownership": "required",
-                    "max_land_size": None  # No limit
-                },
-                "required_documents": [
-                    "Aadhaar Card",
-                    "Land Ownership Document",
-                    "Bank Account Details"
-                ],
-                "application_url": "https://pmkisan.gov.in"
-            },
-            "ayushman_bharat": {
-                "id": "ayushman_bharat",
-                "name": "Ayushman Bharat",
-                "full_name": "Pradhan Mantri Jan Arogya Yojana",
-                "description": "Health insurance for poor families",
-                "benefit_amount": 500000,
-                "benefit_frequency": "yearly_coverage",
-                "eligibility": {
-                    "income_limit": 100000,
-                    "family_type": "BPL"
-                },
-                "required_documents": [
-                    "Aadhaar Card",
-                    "Ration Card",
-                    "Income Certificate"
-                ],
-                "application_url": "https://pmjay.gov.in"
-            }
-        }
-    
-    def get_eligible_schemes(self, user_profile: Dict) -> List[Dict]:
-        """
-        Get schemes user is eligible for
-        """
-        eligible = []
-        
-        for scheme_id, scheme in self.schemes_db.items():
-            if self._check_eligibility(user_profile, scheme):
-                eligible.append(scheme)
-        
-        return eligible
-    
-    def _check_eligibility(self, user_profile: Dict, scheme: Dict) -> bool:
-        """
-        Check if user is eligible for a scheme
-        
-        Simple eligibility logic for MVP
-        """
-        # Implement eligibility rules
-        return True  # Simplified for MVP
-```
-
----
-
-## 6. Call Flow & State Management
-
-### 6.1 State Machine for Railway Booking
-
-```python
-# state_machine.py
-
-from enum import Enum
+import uuid
+import time
 from typing import Dict, Optional
+from datetime import datetime, timedelta
 
-class BookingState(Enum):
+# Initialize AWS clients
+dynamodb = boto3.resource('dynamodb')
+sessions_table = dynamodb.Table('bharatvani-sessions')
+users_table = dynamodb.Table('bharatvani-users')
+
+def lambda_handler(event, context):
     """
-    States in railway booking flow
+    Main handler for session management
+    
+    Event structure from Amazon Connect:
+    {
+        "Details": {
+            "ContactData": {
+                "CustomerEndpoint": {
+                    "Address": "+919876543210"
+                },
+                "ContactId": "abc-123-def"
+            },
+            "Parameters": {
+                "action": "create_session" | "get_session" | "update_session" | "close_session",
+                "session_id": "optional",
+                "updates": "optional json string"
+            }
+        }
+    }
     """
-    INITIAL = "initial"
-    WAITING_SOURCE = "waiting_source"
-    WAITING_DESTINATION = "waiting_destination"
-    WAITING_DATE = "waiting_date"
-    SEARCHING_TRAINS = "searching_trains"
-    PRESENTING_OPTIONS = "presenting_options"
-    WAITING_TRAIN_SELECTION = "waiting_train_selection"
-    WAITING_CLASS_SELECTION = "waiting_class_selection"
-    WAITING_PASSENGER_COUNT = "waiting_passenger_count"
-    COLLECTING_PASSENGER_DETAILS = "collecting_passenger_details"
-    CONFIRMING_BOOKING = "confirming_booking"
-    PROCESSING_PAYMENT = "processing_payment"
-    BOOKING_COMPLETE = "booking_complete"
-    ERROR = "error"
+    
+    try:
+        # Extract parameters
+        phone_number = event['Details']['ContactData']['CustomerEndpoint']['Address']
+        contact_id = event['Details']['ContactData']['ContactId']
+        params = event['Details']['Parameters']
+        
+        action = params.get('action', 'create_session')
+        
+        # Route to appropriate handler
+        if action == 'create_session':
+            result = create_session(phone_number, contact_id)
+        elif action == 'get_session':
+            session_id = params.get('session_id')
+            result = get_session(session_id)
+        elif action == 'update_session':
+            session_id = params.get('session_id')
+            updates = json.loads(params.get('updates', '{}'))
+            result = update_session(session_id, updates)
+        elif action == 'close_session':
+            session_id = params.get('session_id')
+            result = close_session(session_id)
+        else:
+            result = {'error': 'Invalid action'}
+        
+        return {
+            'statusCode': 200,
+            'body': json.dumps(result)
+        }
+        
+    except Exception as e:
+        print(f"Error in session manager: {str(e)}")
+        return {
+            'statusCode': 500,
+            'body': json.dumps({'error': str(e)})
+        }
+
+
+def create_session(phone_number: str, contact_id: str) -> Dict:
+    """
+    Create a new session for a call
+    """
+    
+    # Generate session ID
+    session_id = f"sess_{int(time.time())}_{uuid.uuid4().hex[:8]}"
+    
+    # Get or create user profile
+    user_profile = get_user_profile(phone_number)
+    
+    # Create session object
+    session = {
+        'session_id': session_id,
+        'phone_number': phone_number,
+        'contact_id': contact_id,
+        'created_at': int(time.time()),
+        'updated_at': int(time.time()),
+        
+        'user_profile': user_profile,
+        
+        'conversation_state': {
+            'current_service': None,
+            'state': 'initial',
+            'context': {
+                'conversation_history': []
+            }
+        },
+        
+        'metadata': {
+            'call_count': user_profile.get('statistics', {}).get('total_calls', 0) + 1
+        },
+        
+        # Auto-expire after 24 hours
+        'ttl': int(time.time()) + 86400
+    }
+    
+    # Save to DynamoDB
+    sessions_table.put_item(Item=session)
+    
+    # Update user stats
+    update_user_stats(phone_number, 'call_started')
+    
+    return {
+        'session_id': session_id,
+        'user_profile': user_profile,
+        'success': True
+    }
+
+
+def get_session(session_id: str) -> Optional[Dict]:
+    """
+    Retrieve existing session
+    """
+    
+    try:
+        response = sessions_table.get_item(
+            Key={'session_id': session_id}
+        )
+        
+        if 'Item' in response:
+            return response['Item']
+        else:
+            return {'error': 'Session not found'}
+            
+    except Exception as e:
+        print(f"Error retrieving session: {str(e)}")
+        return {'error': str(e)}
+
+
+def update_session(session_id: str, updates: Dict) -> Dict:
+    """
+    Update session with new data
+    
+    Args:
+        session_id: Session identifier
+        updates: Dictionary of updates to apply
+    """
+    
+    try:
+        # Get current session
+        current = get_session(session_id)
+        if 'error' in current:
+            return current
+        
+        # Apply updates
+        if 'conversation_state' in updates:
+            current['conversation_state'].update(updates['conversation_state'])
+        
+        if 'metadata' in updates:
+            current['metadata'].update(updates['metadata'])
+        
+        # Update timestamp
+        current['updated_at'] = int(time.time())
+        
+        # Save back to DynamoDB
+        sessions_table.put_item(Item=current)
+        
+        return {
+            'session_id': session_id,
+            'success': True
+        }
+        
+    except Exception as e:
+        print(f"Error updating session: {str(e)}")
+        return {'error': str(e)}
+
+
+def close_session(session_id: str) -> Dict:
+    """
+    Close a session and cleanup
+    """
+    
+    try:
+        # Get session
+        session = get_session(session_id)
+        if 'error' in session:
+            return session
+        
+        # Update user stats
+        phone_number = session['phone_number']
+        call_duration = int(time.time()) - session['created_at']
+        
+        update_user_stats(phone_number, 'call_ended', {
+            'duration': call_duration
+        })
+        
+        # Delete session (or mark as closed)
+        sessions_table.delete_item(
+            Key={'session_id': session_id}
+        )
+        
+        return {
+            'session_id': session_id,
+            'success': True
+        }
+        
+    except Exception as e:
+        print(f"Error closing session: {str(e)}")
+        return {'error': str(e)}
+
+
+def get_user_profile(phone_number: str) -> Dict:
+    """
+    Get or create user profile
+    """
+    
+    try:
+        response = users_table.get_item(
+            Key={'phone_number': phone_number}
+        )
+        
+        if 'Item' in response:
+            return response['Item']
+        else:
+            # Create new user profile
+            new_user = {
+                'phone_number': phone_number,
+                'profile': {
+                    'language_preference': 'hindi',  # Default
+                    'created_at': int(time.time())
+                },
+                'statistics': {
+                    'total_calls': 0,
+                    'successful_transactions': 0
+                },
+                'created_at': int(time.time()),
+                'updated_at': int(time.time())
+            }
+            
+            users_table.put_item(Item=new_user)
+            return new_user
+            
+    except Exception as e:
+        print(f"Error getting user profile: {str(e)}")
+        return {
+            'profile': {
+                'language_preference': 'hindi'
+            },
+            'statistics': {}
+        }
+
+
+def update_user_stats(phone_number: str, event_type: str, data: Dict = None):
+    """
+    Update user statistics
+    """
+    
+    try:
+        users_table.update_item(
+            Key={'phone_number': phone_number},
+            UpdateExpression='SET statistics.total_calls = statistics.total_calls + :inc, updated_at = :now',
+            ExpressionAttributeValues={
+                ':inc': 1 if event_type == 'call_started' else 0,
+                ':now': int(time.time())
+            }
+        )
+    except Exception as e:
+        print(f"Error updating user stats: {str(e)}")
+```
+
+### 8.2 Railway Booking Handler
+
+```python
+# lambda_functions/railway_booking/handler.py
+
+import boto3
+import json
+import time
+from typing import Dict, List, Optional
+from datetime import datetime, timedelta
+
+# Import custom modules
+from bedrock_client import call_bedrock, extract_intent
+from irctc_client import IRCTCClient
+from state_machine import BookingStateMachine, BookingState
+
+# Initialize clients
+dynamodb = boto3.resource('dynamodb')
+sessions_table = dynamodb.Table('bharatvani-sessions')
+bookings_table = dynamodb.Table('bharatvani-bookings')
+sns = boto3.client('sns')
+
+# IRCTC client (mock for MVP)
+irctc = IRCTCClient(api_key="mock_key")
+
+def lambda_handler(event, context):
+    """
+    Main handler for railway booking
+    
+    Event from Amazon Connect:
+    {
+        "session_id": "sess_xxx",
+        "user_input": "mumbai se delhi",
+        "language": "hindi"
+    }
+    """
+    
+    try:
+        session_id = event.get('session_id')
+        user_input = event.get('user_input', '')
+        language = event.get('language', 'hindi')
+        
+        # Get session
+        session = get_session(session_id)
+        if not session:
+            return error_response("Session not found")
+        
+        # Initialize state machine
+        state_machine = BookingStateMachine.from_session(session)
+        
+        # Process user input
+        result = state_machine.process_input(user_input, language)
+        
+        # Save updated session
+        save_session(session_id, state_machine.to_dict())
+        
+        # Handle completion
+        if state_machine.state == BookingState.BOOKING_COMPLETE:
+            # Save booking
+            booking_id = save_booking(session_id, state_machine.context)
+            
+            # Send SMS
+            send_confirmation_sms(
+                phone_number=session['phone_number'],
+                booking_data=state_machine.context,
+                language=language
+            )
+            
+            result['booking_id'] = booking_id
+        
+        return {
+            'statusCode': 200,
+            'body': json.dumps(result)
+        }
+        
+    except Exception as e:
+        print(f"Error in railway booking: {str(e)}")
+        return error_response(str(e))
 
 
 class BookingStateMachine:
     """
-    State machine for railway booking conversation
+    State machine for railway booking flow
     """
     
-    def __init__(self, session_id: str):
-        self.session_id = session_id
+    def __init__(self):
         self.state = BookingState.INITIAL
         self.context = {}
+        self.conversation_history = []
     
-    def transition(self, user_input: str) -> Dict:
+    @classmethod
+    def from_session(cls, session: Dict):
         """
-        Process user input and transition to next state
+        Restore state machine from session
+        """
+        machine = cls()
         
-        Returns:
-            {
-                "next_state": BookingState,
-                "system_response": str,
-                "actions": [...]
-            }
+        conv_state = session.get('conversation_state', {})
+        machine.state = BookingState(conv_state.get('state', 'initial'))
+        machine.context = conv_state.get('context', {})
+        machine.conversation_history = machine.context.get('conversation_history', [])
+        
+        return machine
+    
+    def process_input(self, user_input: str, language: str) -> Dict:
+        """
+        Process user input and determine response
         """
         
+        # Add to history
+        self.add_to_history('user', user_input)
+        
+        # Route based on current state
         if self.state == BookingState.INITIAL:
-            return self._handle_initial(user_input)
+            response = self._handle_initial(user_input, language)
         
         elif self.state == BookingState.WAITING_SOURCE:
-            return self._handle_source_input(user_input)
+            response = self._handle_source_input(user_input, language)
         
         elif self.state == BookingState.WAITING_DESTINATION:
-            return self._handle_destination_input(user_input)
+            response = self._handle_destination_input(user_input, language)
         
         elif self.state == BookingState.WAITING_DATE:
-            return self._handle_date_input(user_input)
+            response = self._handle_date_input(user_input, language)
         
-        # ... more state handlers
+        elif self.state == BookingState.WAITING_TRAIN_SELECTION:
+            response = self._handle_train_selection(user_input, language)
+        
+        elif self.state == BookingState.WAITING_PASSENGER_DETAILS:
+            response = self._handle_passenger_details(user_input, language)
+        
+        elif self.state == BookingState.CONFIRMING_BOOKING:
+            response = self._handle_confirmation(user_input, language)
+        
+        else:
+            response = self._handle_error(language)
+        
+        # Add system response to history
+        self.add_to_history('system', response['message'])
+        
+        return response
     
-    def _handle_initial(self, user_input: str) -> Dict:
+    def _handle_initial(self, user_input: str, language: str) -> Dict:
         """
-        Handle initial state
+        Handle initial state - ask for source
         """
         self.state = BookingState.WAITING_SOURCE
         
+        message = "Kahan se yatra karni hai?" if language == 'hindi' else "Where do you want to travel from?"
+        
         return {
-            "next_state": self.state,
-            "system_response": "Kahan se yatra karni hai? Shahr ka naam bataiye.",
-            "actions": ["save_session"]
+            'message': message,
+            'state': self.state.value,
+            'awaiting_input': True
         }
     
-    def _handle_source_input(self, user_input: str) -> Dict:
+    def _handle_source_input(self, user_input: str, language: str) -> Dict:
         """
-        Handle source station input
+        Extract source station from input
         """
-        # Extract station from input using Bedrock
-        source = self._extract_station(user_input)
+        
+        # Use Bedrock to extract station
+        intent_data = extract_intent(
+            text=user_input,
+            context=self.get_context_for_ai(),
+            language=language
+        )
+        
+        source = intent_data.get('entities', {}).get('station')
         
         if source:
-            self.context["source"] = source
+            self.context['source'] = source
             self.state = BookingState.WAITING_DESTINATION
             
+            message = f"{source} se kahan jana hai?" if language == 'hindi' else f"Where do you want to go from {source}?"
+            
             return {
-                "next_state": self.state,
-                "system_response": f"{source} se kahan jana hai?",
-                "actions": ["save_session"]
+                'message': message,
+                'state': self.state.value,
+                'awaiting_input': True
             }
         else:
+            # Didn't understand, try again
+            message = "Station ka naam samajh nahi aaya. Kripya dubara bataiye." if language == 'hindi' else "I didn't understand the station name. Please tell again."
+            
             return {
-                "next_state": self.state,  # Stay in same state
-                "system_response": "Samajh nahi aaya. Kripya station ka naam dubara bataiye.",
-                "actions": []
+                'message': message,
+                'state': self.state.value,
+                'awaiting_input': True
             }
     
-    def _handle_destination_input(self, user_input: str) -> Dict:
+    def _handle_destination_input(self, user_input: str, language: str) -> Dict:
         """
-        Handle destination station input
+        Extract destination station
         """
-        dest = self._extract_station(user_input)
         
-        if dest:
-            self.context["destination"] = dest
+        intent_data = extract_intent(
+            text=user_input,
+            context=self.get_context_for_ai(),
+            language=language
+        )
+        
+        destination = intent_data.get('entities', {}).get('station')
+        
+        if destination:
+            self.context['destination'] = destination
             self.state = BookingState.WAITING_DATE
             
-            return {
-                "next_state": self.state,
-                "system_response": "Kab jana hai? Aaj, kal, ya koi aur din?",
-                "actions": ["save_session"]
-            }
-        else:
-            return {
-                "next_state": self.state,
-                "system_response": "Station samajh nahi aaya. Dubara bataiye.",
-                "actions": []
-            }
-    
-    def _handle_date_input(self, user_input: str) -> Dict:
-        """
-        Handle journey date input
-        """
-        date = self._parse_date(user_input)
-        
-        if date:
-            self.context["date"] = date
-            self.state = BookingState.SEARCHING_TRAINS
+            message = "Kab jana hai? Aaj, kal, ya koi aur din?" if language == 'hindi' else "When do you want to travel? Today, tomorrow, or another day?"
             
             return {
-                "next_state": self.state,
-                "system_response": "Thik hai. Trains search kar raha hoon...",
-                "actions": ["save_session", "search_trains"]
+                'message': message,
+                'state': self.state.value,
+                'awaiting_input': True
             }
         else:
+            message = "Destination samajh nahi aaya. Dubara bataiye." if language == 'hindi' else "I didn't understand the destination. Please tell again."
+            
             return {
-                "next_state": self.state,
-                "system_response": "Date samajh nahi aayi. Kripya dubara bataiye - jaise 'kal' ya '15 February'.",
-                "actions": []
+                'message': message,
+                'state': self.state.value,
+                'awaiting_input': True
             }
     
-    def _extract_station(self, text: str) -> Optional[str]:
+    def _handle_date_input(self, user_input: str, language: str) -> Dict:
         """
-        Extract station name from user input using Bedrock
+        Parse journey date
         """
-        # Call Bedrock to extract station
-        # For MVP, simple keyword matching
         
-        stations = {
-            "mumbai": "Mumbai Central (BOM)",
-            "delhi": "New Delhi (NDLS)",
-            "bangalore": "Bangalore (SBC)",
-            "chennai": "Chennai Central (MAS)",
-            "kolkata": "Howrah (HWH)",
-            "hyderabad": "Hyderabad (HYB)"
-        }
+        date = parse_date_from_text(user_input, language)
         
-        text_lower = text.lower()
-        for key, value in stations.items():
-            if key in text_lower:
-                return value
-        
-        return None
-    
-    def _parse_date(self, text: str) -> Optional[str]:
-        """
-        Parse date from natural language
-        """
-        from datetime import datetime, timedelta
-        
-        text_lower = text.lower()
-        today = datetime.now()
-        
-        if "aaj" in text_lower or "today" in text_lower:
-            return today.strftime("%Y-%m-%d")
-        elif "kal" in text_lower or "tomorrow" in text_lower:
-            return (today + timedelta(days=1)).strftime("%Y-%m-%d")
-        elif "parso" in text_lower or "day after" in text_lower:
-            return (today + timedelta(days=2)).strftime("%Y-%m-%d")
+        if date:
+            self.context['journey_date'] = date
+            self.state = BookingState.SEARCHING_TRAINS
+            
+            # Search trains
+            trains = self._search_trains()
+            
+            if trains:
+                self.context['available_trains'] = trains
+                self.state = BookingState.WAITING_TRAIN_SELECTION
+                
+                # Generate options message
+                message = self._format_train_options(trains, language)
+                
+                return {
+                    'message': message,
+                    'state': self.state.value,
+                    'awaiting_input': True
+                }
+            else:
+                message = "Koi train nahi mili. Kripya date check karein." if language == 'hindi' else "No trains found. Please check the date."
+                self.state = BookingState.WAITING_DATE
+                
+                return {
+                    'message': message,
+                    'state': self.state.value,
+                    'awaiting_input': True
+                }
         else:
-            # Use Bedrock for complex date parsing
-            return None
-```
-
-### 6.2 Context Management
-
-```python
-# context_manager.py
-
-import json
-from typing import Dict, List, Optional
-from datetime import datetime
-
-class ConversationContext:
-    """
-    Manages conversation context across turns
-    """
+            message = "Date samajh nahi aayi. Kripya 'kal' ya '15 February' jaise bataiye." if language == 'hindi' else "I didn't understand the date. Please say like 'tomorrow' or '15 February'."
+            
+            return {
+                'message': message,
+                'state': self.state.value,
+                'awaiting_input': True
+            }
     
-    def __init__(self, session_id: str):
-        self.session_id = session_id
-        self.history: List[Dict] = []
-        self.entities: Dict = {}
-        self.state_data: Dict = {}
-    
-    def add_turn(self, speaker: str, text: str, metadata: Optional[Dict] = None):
+    def _search_trains(self) -> List[Dict]:
         """
-        Add a conversation turn
+        Search for trains using IRCTC client
         """
-        turn = {
-            "speaker": speaker,  # "user" or "system"
-            "text": text,
-            "timestamp": datetime.utcnow().isoformat(),
-            "metadata": metadata or {}
-        }
         
-        self.history.append(turn)
+        try:
+            trains = irctc.search_trains(
+                source_station=self.context['source'],
+                dest_station=self.context['destination'],
+                journey_date=self.context['journey_date']
+            )
+            return trains
+        except Exception as e:
+            print(f"Error searching trains: {str(e)}")
+            return []
     
-    def update_entity(self, entity_name: str, value: any):
+    def _format_train_options(self, trains: List[Dict], language: str) -> str:
         """
-        Update an extracted entity
+        Format train options for user
         """
-        self.entities[entity_name] = {
-            "value": value,
-            "updated_at": datetime.utcnow().isoformat()
+        
+        if language == 'hindi':
+            message = f"{len(trains)} trains milein:\n"
+            for i, train in enumerate(trains[:3], 1):  # Show max 3
+                message += f"{i}. {train['train_name']} - {train['departure_time']} baje - ₹{train['available_classes'][0]['fare']}\n"
+            message += "Konsi train chahiye? Number bataiye."
+        else:
+            message = f"{len(trains)} trains found:\n"
+            for i, train in enumerate(trains[:3], 1):
+                message += f"{i}. {train['train_name']} - {train['departure_time']} - ₹{train['available_classes'][0]['fare']}\n"
+            message += "Which train do you want? Tell the number."
+        
+        return message
+    
+    def _handle_train_selection(self, user_input: str, language: str) -> Dict:
+        """
+        Handle train selection
+        """
+        
+        # Extract number
+        selection = extract_number_from_text(user_input)
+        
+        if selection and 1 <= selection <= len(self.context['available_trains']):
+            selected_train = self.context['available_trains'][selection - 1]
+            self.context['selected_train'] = selected_train
+            self.state = BookingState.WAITING_PASSENGER_DETAILS
+            
+            message = "Aapka naam kya hai?" if language == 'hindi' else "What is your name?"
+            
+            return {
+                'message': message,
+                'state': self.state.value,
+                'awaiting_input': True
+            }
+        else:
+            message = "Galat number. Kripya 1, 2, ya 3 bataiye." if language == 'hindi' else "Wrong number. Please say 1, 2, or 3."
+            
+            return {
+                'message': message,
+                'state': self.state.value,
+                'awaiting_input': True
+            }
+    
+    def _handle_passenger_details(self, user_input: str, language: str) -> Dict:
+        """
+        Collect passenger details
+        """
+        
+        # Simple flow: just collect name for MVP
+        # In production, collect age, gender, etc.
+        
+        self.context['passenger_name'] = user_input
+        self.context['passenger_age'] = 55  # Mock
+        self.state = BookingState.CONFIRMING_BOOKING
+        
+        # Generate confirmation message
+        message = self._generate_confirmation_message(language)
+        
+        return {
+            'message': message,
+            'state': self.state.value,
+            'awaiting_input': True
         }
     
-    def get_entity(self, entity_name: str, default=None):
+    def _generate_confirmation_message(self, language: str) -> str:
         """
-        Get entity value
+        Generate booking confirmation prompt
         """
-        entity = self.entities.get(entity_name)
-        return entity["value"] if entity else default
-    
-    def set_state_data(self, key: str, value: any):
-        """
-        Set state-specific data
-        """
-        self.state_data[key] = value
-    
-    def get_state_data(self, key: str, default=None):
-        """
-        Get state-specific data
-        """
-        return self.state_data.get(key, default)
-    
-    def get_context_summary(self, last_n_turns: int = 5) -> str:
-        """
-        Get conversation summary for Bedrock context
-        """
-        recent_history = self.history[-last_n_turns:]
         
-        summary = {
-            "recent_conversation": [
-                f"{turn['speaker']}: {turn['text']}"
-                for turn in recent_history
-            ],
-            "extracted_entities": self.entities,
-            "state_data": self.state_data
+        train = self.context['selected_train']
+        
+        if language == 'hindi':
+            message = f"""
+Confirm karein:
+Train: {train['train_name']}
+Date: {self.context['journey_date']}
+{self.context['source']} se {self.context['destination']}
+Passenger: {self.context['passenger_name']}
+Price: ₹{train['available_classes'][0]['fare']}
+
+Sahi hai? Haan ya Nahi bataiye.
+"""
+        else:
+            message = f"""
+Please confirm:
+Train: {train['train_name']}
+Date: {self.context['journey_date']}
+From {self.context['source']} to {self.context['destination']}
+Passenger: {self.context['passenger_name']}
+Price: ₹{train['available_classes'][0]['fare']}
+
+Is this correct? Say Yes or No.
+"""
+        
+        return message.strip()
+    
+    def _handle_confirmation(self, user_input: str, language: str) -> Dict:
+        """
+        Handle booking confirmation
+        """
+        
+        confirmation = extract_confirmation(user_input, language)
+        
+        if confirmation:
+            # Process booking
+            booking_result = self._process_booking()
+            
+            if booking_result['status'] == 'success':
+                self.context['pnr'] = booking_result['pnr']
+                self.context['booking_id'] = booking_result['booking_id']
+                self.state = BookingState.BOOKING_COMPLETE
+                
+                message = f"Ticket book ho gayi! PNR: {booking_result['pnr']}. SMS aapko mil jayega." if language == 'hindi' else f"Ticket booked! PNR: {booking_result['pnr']}. You will receive SMS."
+                
+                return {
+                    'message': message,
+                    'state': self.state.value,
+                    'awaiting_input': False,
+                    'booking_complete': True
+                }
+            else:
+                message = "Booking mein problem aayi. Kripya dobara try karein." if language == 'hindi' else "There was a problem with booking. Please try again."
+                self.state = BookingState.ERROR
+                
+                return {
+                    'message': message,
+                    'state': self.state.value,
+                    'awaiting_input': False
+                }
+        else:
+            # User said no
+            message = "Thik hai. Kya change karna hai?" if language == 'hindi' else "Okay. What do you want to change?"
+            self.state = BookingState.INITIAL
+            
+            return {
+                'message': message,
+                'state': self.state.value,
+                'awaiting_input': True
+            }
+    
+    def _process_booking(self) -> Dict:
+        """
+        Actually book the ticket
+        """
+        
+        try:
+            train = self.context['selected_train']
+            
+            booking_data = {
+                'train_number': train['train_number'],
+                'journey_date': self.context['journey_date'],
+                'class': train['available_classes'][0]['class_type'],
+                'passengers': [
+                    {
+                        'name': self.context['passenger_name'],
+                        'age': self.context['passenger_age'],
+                        'gender': 'M'
+                    }
+                ],
+                'total_fare': train['available_classes'][0]['fare']
+            }
+            
+            result = irctc.book_ticket(booking_data)
+            
+            return {
+                'status': 'success',
+                'pnr': result['pnr'],
+                'booking_id': result['booking_id']
+            }
+            
+        except Exception as e:
+            print(f"Error processing booking: {str(e)}")
+            return {
+                'status': 'error',
+                'message': str(e)
+            }
+    
+    def _handle_error(self, language: str) -> Dict:
+        """
+        Handle error state
+        """
+        
+        message = "Kuch galat ho gaya. Dobara shuru karte hain." if language == 'hindi' else "Something went wrong. Let's start again."
+        self.state = BookingState.INITIAL
+        self.context = {}
+        
+        return {
+            'message': message,
+            'state': self.state.value,
+            'awaiting_input': True
         }
-        
-        return json.dumps(summary, indent=2)
+    
+    def add_to_history(self, speaker: str, text: str):
+        """
+        Add turn to conversation history
+        """
+        self.conversation_history.append({
+            'speaker': speaker,
+            'text': text,
+            'timestamp': int(time.time())
+        })
+    
+    def get_context_for_ai(self) -> str:
+        """
+        Get context summary for AI
+        """
+        return json.dumps({
+            'current_state': self.state.value,
+            'collected_data': self.context,
+            'recent_conversation': self.conversation_history[-5:]
+        })
     
     def to_dict(self) -> Dict:
         """
-        Serialize context for storage
+        Serialize state machine to dict
         """
         return {
-            "session_id": self.session_id,
-            "history": self.history,
-            "entities": self.entities,
-            "state_data": self.state_data
+            'state': self.state.value,
+            'context': {
+                **self.context,
+                'conversation_history': self.conversation_history
+            }
         }
+
+
+# Helper functions
+
+def parse_date_from_text(text: str, language: str) -> Optional[str]:
+    """
+    Parse date from natural language
+    """
+    from datetime import datetime, timedelta
     
-    @classmethod
-    def from_dict(cls, data: Dict) -> 'ConversationContext':
-        """
-        Deserialize context from storage
-        """
-        context = cls(data["session_id"])
-        context.history = data.get("history", [])
-        context.entities = data.get("entities", {})
-        context.state_data = data.get("state_data", {})
-        return context
+    text_lower = text.lower()
+    today = datetime.now()
+    
+    # Handle common date expressions
+    if any(word in text_lower for word in ['aaj', 'today']):
+        return today.strftime('%Y-%m-%d')
+    elif any(word in text_lower for word in ['kal', 'tomorrow']):
+        return (today + timedelta(days=1)).strftime('%Y-%m-%d')
+    elif any(word in text_lower for word in ['parso', 'day after']):
+        return (today + timedelta(days=2)).strftime('%Y-%m-%d')
+    else:
+        # Use Bedrock for complex parsing
+        try:
+            result = call_bedrock(
+                message=f"Extract date from: '{text}'. Today is {today.strftime('%Y-%m-%d')}. Return only date in YYYY-MM-DD format or 'NONE'.",
+                context={},
+                language=language
+            )
+            
+            if 'NONE' not in result and len(result) == 10:
+                return result
+            else:
+                return None
+        except:
+            return None
+
+
+def extract_number_from_text(text: str) -> Optional[int]:
+    """
+    Extract number from text
+    """
+    # Handle digit
+    if text.strip().isdigit():
+        return int(text.strip())
+    
+    # Handle words
+    words_to_numbers = {
+        'ek': 1, 'one': 1, '1': 1,
+        'do': 2, 'two': 2, '2': 2,
+        'teen': 3, 'three': 3, '3': 3
+    }
+    
+    for word, num in words_to_numbers.items():
+        if word in text.lower():
+            return num
+    
+    return None
+
+
+def extract_confirmation(text: str, language: str) -> bool:
+    """
+    Extract yes/no confirmation
+    """
+    text_lower = text.lower()
+    
+    yes_words = ['haan', 'yes', 'हां', 'sahi', 'correct', 'thik']
+    no_words = ['nahi', 'no', 'नहीं', 'galat', 'wrong']
+    
+    if any(word in text_lower for word in yes_words):
+        return True
+    elif any(word in text_lower for word in no_words):
+        return False
+    else:
+        return None
+
+
+def save_booking(session_id: str, booking_data: Dict) -> str:
+    """
+    Save booking to DynamoDB
+    """
+    
+    booking_id = f"bk_{int(time.time())}_{uuid.uuid4().hex[:6]}"
+    
+    booking = {
+        'booking_id': booking_id,
+        'session_id': session_id,
+        'booking_type': 'railway_ticket',
+        'booking_details': {
+            'pnr': booking_data['pnr'],
+            'train': booking_data['selected_train'],
+            'journey_date': booking_data['journey_date'],
+            'passenger': {
+                'name': booking_data['passenger_name'],
+                'age': booking_data['passenger_age']
+            }
+        },
+        'created_at': int(time.time())
+    }
+    
+    bookings_table.put_item(Item=booking)
+    
+    return booking_id
+
+
+def send_confirmation_sms(phone_number: str, booking_data: Dict, language: str):
+    """
+    Send SMS confirmation
+    """
+    
+    train = booking_data['selected_train']
+    pnr = booking_data['pnr']
+    
+    if language == 'hindi':
+        message = f"Ticket book ho gayi! PNR: {pnr}. Train: {train['train_name']}. Date: {booking_data['journey_date']}. - BharatVani"
+    else:
+        message = f"Ticket booked! PNR: {pnr}. Train: {train['train_name']}. Date: {booking_data['journey_date']}. - BharatVani"
+    
+    try:
+        sns.publish(
+            PhoneNumber=phone_number,
+            Message=message,
+            MessageAttributes={
+                'AWS.SNS.SMS.SenderID': {
+                    'DataType': 'String',
+                    'StringValue': 'BHRVANI'
+                },
+                'AWS.SNS.SMS.SMSType': {
+                    'DataType': 'String',
+                    'StringValue': 'Transactional'
+                }
+            }
+        )
+    except Exception as e:
+        print(f"Error sending SMS: {str(e)}")
+
+
+def error_response(message: str) -> Dict:
+    """
+    Standard error response
+    """
+    return {
+        'statusCode': 500,
+        'body': json.dumps({
+            'error': message
+        })
+    }
+
+
+def get_session(session_id: str) -> Optional[Dict]:
+    """
+    Get session from DynamoDB
+    """
+    try:
+        response = sessions_table.get_item(
+            Key={'session_id': session_id}
+        )
+        return response.get('Item')
+    except Exception as e:
+        print(f"Error getting session: {str(e)}")
+        return None
+
+
+def save_session(session_id: str, state_data: Dict):
+    """
+    Save session to DynamoDB
+    """
+    try:
+        sessions_table.update_item(
+            Key={'session_id': session_id},
+            UpdateExpression='SET conversation_state = :state, updated_at = :now',
+            ExpressionAttributeValues={
+                ':state': state_data,
+                ':now': int(time.time())
+            }
+        )
+    except Exception as e:
+        print(f"Error saving session: {str(e)}")
 ```
 
 ---
 
-*This document continues with Implementation Guide, Code Examples, Testing Strategy, and Deployment in the next sections...*
+*This document continues with Testing Strategy and Deployment sections...*
 
-Would you like me to continue with the remaining sections (7-10)?
+Would you like me to:
+1. Continue with Testing Strategy section?
+2. Add Deployment & Infrastructure as Code section?
+3. Create visual architecture diagrams?
+4. Provide AWS SAM/CloudFormation templates?
+
+Let me know what you need next!
