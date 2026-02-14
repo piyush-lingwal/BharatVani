@@ -355,12 +355,12 @@ erDiagram
         string language
         string current_intent
         string current_module
-        map module_state
-        list conversation_history
+        string module_state
+        string conversation_history
         boolean verified
-        datetime started_at
-        datetime last_active
-        number ttl
+        string started_at
+        string last_active
+        int ttl
     }
 
     USERS {
@@ -369,40 +369,40 @@ erDiagram
         string language_preference
         string district
         string state
-        list past_sessions
-        map preferences
-        datetime created_at
+        string past_sessions
+        string preferences
+        string created_at
     }
 
     ORDERS {
         string order_id PK
-        string phone_number GSI
+        string phone_number
         string product_id
         string status
-        number amount
-        map delivery_address
-        datetime created_at
+        int amount
+        string delivery_address
+        string created_at
     }
 
     SCHEME_QUERIES {
         string query_id PK
-        string phone_number GSI
+        string phone_number
         string scheme_name
         string query_type
         string response_summary
-        datetime queried_at
+        string queried_at
     }
 
     MANDI_PRICES {
         string crop_city PK
         string crop_name
         string city
-        number price_per_kg
-        datetime last_updated
-        number ttl
+        int price_per_kg
+        string last_updated
+        int ttl
     }
 
-    USERS ||--o{ SESSIONS : "has many"
+    USERS ||--o{ SESSIONS : "has-many"
     USERS ||--o{ ORDERS : "places"
     USERS ||--o{ SCHEME_QUERIES : "asks"
 ```
