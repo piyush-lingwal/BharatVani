@@ -838,7 +838,7 @@ Every new service is **one Lambda + one S3 file + one intent mapping** away from
 
 <div align="center">
 
-### 🏆 BharatVani — The Internet, Spoken.
+### 🏆 PioneerX — The Internet, Spoken.
 
 *Designed for 700 million Indians who deserve digital access.*
 
