@@ -1,575 +1,534 @@
-# BharatVani — System Architecture
+# BharatVani — System Design Document
 
-> **Voice of India** — Any phone. Any language. Any service. Just a call.
+> **भारत वाणी** — Bridging India's Digital Divide Through Voice AI
 
 ---
 
-## 1. Architecture Overview
+## 1. Design Philosophy
+
+BharatVani is designed around one radical principle:
+
+> **The most accessible interface in India is not a screen — it's a voice call.**
+
+Every design decision flows from this. We don't ask users to change their behavior, learn new technology, or buy new devices. We meet them where they already are — on a phone call.
+
+### Design Pillars
+
+```
+┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│  ZERO        │  │  VOICE       │  │  MODULAR     │  │  FAIL        │
+│  BARRIER     │  │  FIRST       │  │  BY DESIGN   │  │  GRACEFULLY  │
+│              │  │              │  │              │  │              │
+│  Any phone   │  │  No screens  │  │  Add any     │  │  Never say   │
+│  Any network │  │  No typing   │  │  service in  │  │  "error" to  │
+│  Zero cost   │  │  No reading  │  │  hours       │  │  the user    │
+└──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘
+```
+
+---
+
+## 2. High-Level Architecture
 
 ```mermaid
 graph TB
-    subgraph "USER LAYER"
-        U["📱 Any Phone<br/>(Feature / Smart)"]
+    subgraph "👤 User Layer"
+        U["Any Phone — Feature or Smart"]
     end
 
-    subgraph "INGRESS LAYER"
-        TC["📡 Telecom Network<br/>(2G/3G/4G/5G)"]
-        AC["☎️ Amazon Connect<br/>(Toll-Free IVR)"]
+    subgraph "📡 Ingress Layer"
+        TEL["Telecom Network 2G/3G/4G"]
+        CON["Amazon Connect — Toll-Free IVR"]
     end
 
-    subgraph "INTELLIGENCE LAYER"
-        TR["🎙️ Amazon Transcribe<br/>(Voice → Text, 22 langs)"]
-        BR["🧠 Amazon Bedrock<br/>(Claude 3.5 Sonnet)"]
-        PO["🔊 Amazon Polly<br/>(Text → Natural Voice)"]
+    subgraph "🧠 Intelligence Layer"
+        STT["Amazon Transcribe — Speech to Text"]
+        AI["Amazon Bedrock — Claude 3.5 Sonnet"]
+        TTS["Amazon Polly — Text to Speech"]
     end
 
-    subgraph "ORCHESTRATION LAYER"
-        LM["⚡ Lambda: Orchestrator<br/>(Session + Routing)"]
-        SM["🔀 Lambda: Service Router<br/>(Intent → Module)"]
+    subgraph "⚙️ Orchestration Layer"
+        ORC["Lambda: Orchestrator"]
+        RTR["Lambda: Service Router"]
     end
 
-    subgraph "SERVICE MODULES"
-        GS["🏛️ Govt Schemes"]
-        FA["🌾 Farmer Assistant"]
-        EC["🛒 E-Commerce"]
-        GA["💬 General Q&A"]
-        RB["🚂 Rail Booking"]
-        AD["🆔 Aadhaar Services"]
+    subgraph "📦 Service Layer"
+        QA["General Q&A"]
+        GS["Govt Schemes"]
+        FM["Farmer Assistant"]
+        EC["E-Commerce Demo"]
     end
 
-    subgraph "DATA LAYER"
-        DDB["💾 DynamoDB"]
-        S3["📦 S3<br/>(Knowledge Base)"]
+    subgraph "💾 Data Layer"
+        DDB["DynamoDB — Sessions and Data"]
+        S3["S3 — Knowledge Base"]
     end
 
-    subgraph "OUTBOUND LAYER"
-        SNS["📩 Amazon SNS<br/>(SMS Confirmations)"]
+    subgraph "📩 Outbound"
+        SNS["Amazon SNS — SMS"]
     end
 
-    subgraph "EXTERNAL APIs"
-        EXT["🌐 Mandi / Weather<br/>IRCTC / UIDAI"]
-    end
-
-    U -->|"Dials Toll-Free"| TC
-    TC --> AC
-    AC -->|"Audio Stream"| TR
-    TR -->|"Transcribed Text"| LM
-    LM -->|"Text + Session"| BR
-    BR -->|"Intent + Response"| SM
-    SM --> GS & FA & EC & GA & RB & AD
-    GS & FA & EC & RB & AD --> EXT
-    GS & FA & EC & GA & RB & AD --> DDB
+    U --> TEL --> CON
+    CON --> STT --> ORC
+    ORC --> AI
+    AI --> RTR
+    RTR --> QA & GS & FM & EC
+    QA & GS & FM & EC --> DDB
     GS --> S3
-    SM -->|"Final Response"| PO
-    PO -->|"Voice Response"| AC
-    AC -->|"Audio"| TC
-    TC -->|"Voice"| U
-    LM --> SNS
-    SNS -->|"SMS"| U
+    ORC --> TTS --> CON --> TEL --> U
+    ORC --> SNS --> U
 ```
 
 ---
 
-## 2. Detailed Call Flow
+## 3. Conversation Design
 
-This is what happens from the moment a user dials to when they hang up.
+### 3.1 Conversation State Machine
+
+Every call follows a predictable state machine:
 
 ```mermaid
-sequenceDiagram
-    participant U as 📱 User
-    participant AC as ☎️ Amazon Connect
-    participant TR as 🎙️ Transcribe
-    participant LO as ⚡ Orchestrator Lambda
-    participant BR as 🧠 Bedrock
-    participant SR as 🔀 Service Router
-    participant MOD as 📦 Service Module
-    participant PO as 🔊 Polly
-    participant SNS as 📩 SNS
+stateDiagram-v2
+    [*] --> Welcome: Call Connected
+    Welcome --> Listening: Greeting Played
+    Listening --> Processing: User Speaks
+    Processing --> NeedsVerification: Transaction Detected
+    Processing --> Responding: Response Ready
+    NeedsVerification --> OTPSent: OTP Delivered
+    OTPSent --> Verified: Correct OTP
+    OTPSent --> OTPFailed: Wrong OTP (max 3)
+    OTPFailed --> Listening: Retry Prompt
+    Verified --> Responding: Transaction Complete
+    Responding --> Listening: AI Speaks Back
+    Listening --> Goodbye: User Says Bye
+    Listening --> Timeout: 30s Silence
+    Timeout --> Nudge: "Kya aapko kuch aur chahiye?"
+    Nudge --> Listening: User Responds
+    Nudge --> Goodbye: No Response
+    Goodbye --> [*]: Call Ends
+```
 
-    U->>AC: Dials 1800-BHARAT-VANI
-    AC->>LO: New session trigger
-    LO->>LO: Create session in DynamoDB
-    AC->>PO: Welcome prompt
-    PO->>AC: "Namaste! BharatVani mein swagat hai..."
-    AC->>U: 🔊 Welcome greeting
+### 3.2 Conversation Principles
 
-    loop Conversation Loop
-        U->>AC: Speaks naturally
-        AC->>TR: Stream audio
-        TR->>LO: Transcribed text
-        LO->>BR: Text + session context + system prompt
-        BR->>LO: Intent + entities + response
-        LO->>SR: Route to correct module
-        SR->>MOD: Execute service logic
-        MOD->>LO: Result data
-        LO->>BR: Format response in user's language
-        BR->>LO: Natural language reply
-        LO->>PO: Generate speech
-        PO->>AC: Audio response
-        AC->>U: 🔊 AI speaks back
-    end
+| Principle | Rule | Example |
+|---|---|---|
+| **Brevity** | Max 30 words per response | "PM-KISAN mein kisan ko saal mein 6000 rupaye milte hain. Iske liye Aadhaar aur bank account chahiye." |
+| **Clarity** | Simple, spoken language only | ✅ "Aapko 6000 rupaye milenge" ❌ "The disbursement amount is INR 6000" |
+| **Confirmation** | Always confirm before acting | "Maine 2 kg tamatar ka order laga diya hai. 199 rupaye. Theek hai?" |
+| **Recovery** | Never expose errors | ✅ "Samajh nahi aaya, kripya dobara bataiye" ❌ "Speech recognition error" |
+| **Handoff** | Suggest alternatives when stuck | "Yeh jaankari abhi available nahi hai. Aap apne nearest CSC center jaa sakte hain." |
 
-    LO->>SNS: Send confirmation SMS
-    SNS->>U: 📩 SMS received
-    U->>AC: Hangs up
-    AC->>LO: Session end trigger
-    LO->>LO: Save session summary to DynamoDB
+### 3.3 Sample Conversation Flows
+
+#### Flow 1: Government Scheme Query (No Verification)
+
+```
+USER: [Dials toll-free number]
+  AI: "Namaste! BharatVani mein aapka swagat hai.
+       Aap kya jaanna chahte hain?"
+
+USER: "PM-KISAN ke bare mein batao"
+  AI: "PM-KISAN mein har kisan ko saal mein 6000 rupaye milte hain,
+       teen installments mein. Aur kuch jaanna hai iske bare mein?"
+
+USER: "Main eligible hoon kya?"
+  AI: "Kya aapke paas kheti ki zameen hai?"
+
+USER: "Haan, 2 acre hai"
+  AI: "Aap eligible hain! Apply karne ke liye apne nearest
+       CSC center jaayein ya pmkisan.gov.in par register karein.
+       Aadhaar, land papers, aur bank account chahiye."
+
+USER: "Dhanyavaad"
+  AI: "Dhanyavaad! BharatVani ko use karne ke liye shukriya.
+       Kisi bhi samay dubara call karein."
+```
+
+#### Flow 2: E-Commerce Order (With OTP Verification)
+
+```
+USER: "Mujhe phone case chahiye"
+  AI: "Kaunse phone ke liye?"
+
+USER: "Samsung Galaxy"
+  AI: "Teen options hain:
+       1. Silicon case — 299 rupaye
+       2. Leather case — 599 rupaye
+       3. Clear case — 199 rupaye
+       Kaunsa chahiye?"
+
+USER: "Leather wala"
+  AI: "Leather case, 599 rupaye. Order confirm karne ke liye
+       aapke phone par OTP bhej raha hoon."
+       [SMS: "BharatVani OTP: 4832"]
+  AI: "OTP bataiye jo aapke phone par aaya hai."
+
+USER: "4-8-3-2"
+  AI: "Order confirm! Leather case, 599 rupaye.
+       2-3 din mein deliver hoga. Order number SMS bhej diya hai."
+       [SMS: "BharatVani Order #BV-20260215-001 confirmed.
+              Leather Case - ₹599. Delivery: 2-3 days."]
 ```
 
 ---
 
-## 3. Layer-by-Layer Breakdown
+## 4. Two-Phase Implementation Strategy
 
-### 3.1 Ingress Layer — How the Call Gets In
+### Phase 1: Knowledge Engine (General AI)
 
-| Component | Role | Why |
-|---|---|---|
-| **Telecom Network** | Carries the call over 2G/3G/4G | Works everywhere — even villages with no internet |
-| **Amazon Connect** | Cloud contact center, receives the toll-free call | Handles millions of concurrent calls, auto-scales, built-in IVR |
-
-**Key design choice:** Toll-free number means **zero cost to user**. The call works on the cheapest ₹500 phone on a 2G network. This is the entire point — no barriers.
-
----
-
-### 3.2 Intelligence Layer — Voice ↔ AI ↔ Voice
+In Phase 1, BharatVani acts as a **voice-powered knowledge engine**. The AI answers any question using publicly available information — no external API integrations needed.
 
 ```mermaid
 graph LR
-    A["🎙️ User's Voice"] -->|"Streaming"| B["Amazon Transcribe"]
-    B -->|"Text (Hindi/English/Tamil...)"| C["Amazon Bedrock<br/>Claude 3.5 Sonnet"]
-    C -->|"AI Response Text"| D["Amazon Polly"]
-    D -->|"Natural Speech"| E["🔊 Back to User"]
+    A["User's Question"] --> B["Amazon Bedrock"]
+    B --> C{"Knowledge Source"}
+    C -->|"General Knowledge"| D["Bedrock's Training Data"]
+    C -->|"Govt Schemes"| E["S3 Knowledge Base via RAG"]
+    C -->|"Farming Info"| F["S3 Agriculture KB"]
+    D --> G["Voice Response to User"]
+    E --> G
+    F --> G
 ```
 
-| Component | Role | Config |
-|---|---|---|
-| **Amazon Transcribe** | Real-time speech → text | Streaming mode, auto language detection, 22 Indian languages |
-| **Amazon Bedrock** | The brain — understands intent, generates responses | Claude 3.5 Sonnet, with system prompt + knowledge context |
-| **Amazon Polly** | Text → natural speech | Neural voices (Aditi for Hindi, etc.), SSML for natural pauses |
+**What works in Phase 1:**
+- Answer any general question (capital of states, math, health tips, etc.)
+- Government scheme information (eligibility, benefits, how to apply)
+- Farming advice (crop tips, seasonal guidance)
+- Educational content
+- No external API dependencies = **100% reliable**
 
-**Language Detection Flow:**
-1. First utterance is transcribed with auto-detect
-2. Detected language is stored in session
-3. All subsequent Bedrock prompts include: *"Respond in {detected_language}"*
-4. Polly uses the matching voice for that language
+### Phase 2: Transaction Engine (Demo App Integration)
+
+In Phase 2, we add a **demo application** that BharatVani can interact with to complete real transactions — proving the platform can do more than just answer questions.
+
+```mermaid
+graph LR
+    A["User's Voice Command"] --> B["BharatVani AI"]
+    B --> C["Service Module Lambda"]
+    C --> D["Demo App Backend API"]
+    D --> E["Process Order/Booking"]
+    E --> F["Return Confirmation"]
+    F --> C --> B
+    B --> G["Voice Confirmation to User"]
+    B --> H["SMS Confirmation"]
+```
+
+**Demo App includes:**
+- Mock e-commerce store (browse, order, track)
+- Mock booking system (trains, appointments)
+- Fully controlled environment — **zero external dependencies**
+- Clean UI for judges to see real-time updates as the AI places orders
 
 ---
 
-### 3.3 Orchestration Layer — The Brain's Nervous System
+## 5. Intent Detection & Routing Design
 
-This is the **most critical layer** — it manages the entire conversation lifecycle.
+The AI brain (Bedrock) classifies every user utterance into an intent, then the Service Router dispatches to the correct module.
+
+### Intent Taxonomy
 
 ```mermaid
 graph TD
-    subgraph "Orchestrator Lambda"
-        A["Receive Transcribed Text"] --> B["Load Session from DynamoDB"]
-        B --> C["Build Bedrock Prompt<br/>(system prompt + history + user text)"]
-        C --> D["Call Bedrock"]
-        D --> E["Parse Intent + Entities"]
-        E --> F{"Needs Service<br/>Module?"}
-        F -->|Yes| G["Route to Service Module"]
-        F -->|No| H["Direct Response"]
-        G --> I["Get Module Result"]
-        I --> J["Format Response via Bedrock"]
-        H --> J
-        J --> K["Update Session in DynamoDB"]
-        K --> L["Send to Polly → Back to User"]
-    end
+    A["User Utterance"] --> B["Bedrock Intent Classification"]
+    B --> C{"Detected Intent"}
+    C --> D["INFORMATION"]
+    C --> E["TRANSACTION"]
+    C --> F["NAVIGATION"]
+    
+    D --> D1["general_question"]
+    D --> D2["govt_scheme_query"]
+    D --> D3["crop_price_query"]
+    D --> D4["weather_query"]
+    D --> D5["farming_advice"]
+    
+    E --> E1["place_order"]
+    E --> E2["book_ticket"]
+    E --> E3["track_order"]
+    
+    F --> F1["change_language"]
+    F --> F2["repeat_response"]
+    F --> F3["end_call"]
+    F --> F4["go_back"]
 ```
 
-#### Session Object (DynamoDB)
+### Bedrock Structured Output
 
-```json
-{
-  "session_id": "uuid-v4",
-  "phone_number": "+91XXXXXXXXXX",
-  "language": "hi-IN",
-  "started_at": "2026-02-15T10:00:00Z",
-  "last_active": "2026-02-15T10:03:22Z",
-  "conversation_history": [
-    { "role": "user", "text": "PM-KISAN ke bare mein batao" },
-    { "role": "assistant", "text": "PM-KISAN scheme mein..." }
-  ],
-  "current_intent": "govt_scheme_query",
-  "current_module": "govt_schemes",
-  "module_state": {
-    "scheme_name": "pm_kisan",
-    "step": "eligibility_check"
-  },
-  "verified": false,
-  "user_id": "uuid-or-null"
-}
-```
-
----
-
-### 3.4 Service Router — Intent to Action
-
-The Service Router maps AI-detected intents to the correct service module.
-
-```mermaid
-graph LR
-    BR["🧠 Bedrock Output:<br/>intent + entities"] --> SR["🔀 Service Router"]
-    SR -->|"intent: govt_scheme"| GS["🏛️ Govt Schemes Module"]
-    SR -->|"intent: crop_price / weather"| FA["🌾 Farmer Module"]
-    SR -->|"intent: buy_product"| EC["🛒 E-Commerce Module"]
-    SR -->|"intent: book_train"| RB["🚂 Rail Booking Module"]
-    SR -->|"intent: aadhaar"| AD["🆔 Aadhaar Module"]
-    SR -->|"intent: general_question"| GA["💬 General Q&A<br/>(Bedrock Direct)"]
-```
-
-**How intent detection works:**
-
-Bedrock's system prompt instructs it to always output a structured JSON alongside its natural response:
+Every Bedrock response includes machine-readable metadata:
 
 ```json
 {
   "intent": "govt_scheme_query",
+  "confidence": 0.95,
   "entities": {
-    "scheme_name": "pm_kisan",
+    "scheme": "pm_kisan",
     "query_type": "eligibility"
   },
-  "response": "PM-KISAN scheme mein farmers ko...",
   "needs_verification": false,
-  "requires_module": true
+  "response_text": "PM-KISAN mein kisan ko saal mein 6000 rupaye milte hain...",
+  "follow_up_prompt": "Kya aap apni eligibility check karna chahte hain?"
 }
 ```
 
-This structured output lets the Orchestrator route precisely without extra parsing.
-
 ---
 
-## 4. Service Modules — The Pluggable Brain
+## 6. Data Design
 
-Each module is an **independent Lambda function** with its own logic. This makes the system modular — adding a new service = adding a new Lambda.
-
-### 4.1 Government Schemes Module
-
-```mermaid
-graph TD
-    A["User Query"] --> B["Bedrock matches scheme<br/>from S3 Knowledge Base"]
-    B --> C{"Query Type?"}
-    C -->|"Info"| D["Return scheme details"]
-    C -->|"Eligibility"| E["Ask qualifying questions<br/>Age? Land? Income?"]
-    C -->|"How to Apply"| F["Return step-by-step<br/>+ nearest CSC location"]
-    E --> G["Check against<br/>eligibility rules"]
-    G -->|"Eligible"| H["✅ Guide to apply"]
-    G -->|"Not Eligible"| I["❌ Suggest alternatives"]
-```
-
-**Data source:** S3 bucket with JSON knowledge base of 30+ government schemes — fed as context to Bedrock via RAG (Retrieval-Augmented Generation).
-
----
-
-### 4.2 Farmer Assistant Module
-
-```mermaid
-graph TD
-    A["User Query"] --> B{"What does farmer need?"}
-    B -->|"Crop Prices"| C["Fetch from Agmarknet API<br/>or cached mandi data"]
-    B -->|"Weather"| D["Fetch from OpenWeather API<br/>by user's district"]
-    B -->|"Farming Tips"| E["Bedrock answers from<br/>agriculture knowledge base"]
-    C --> F["Format: Crop + City + Price"]
-    D --> G["Format: Tomorrow forecast<br/>+ farming advisory"]
-    E --> H["Natural language response"]
-```
-
-**Data sources:**
-- Mandi prices: `agmarknet.gov.in` (scraped/cached daily into DynamoDB)
-- Weather: OpenWeatherMap API (free tier, by district)
-- Tips: Bedrock's general knowledge + custom agriculture KB in S3
-
----
-
-### 4.3 E-Commerce Module
-
-```mermaid
-graph TD
-    A["User: 'Phone case chahiye'"] --> B["Bedrock extracts:<br/>product type + preferences"]
-    B --> C["Query product catalog<br/>from DynamoDB"]
-    C --> D["Present options via voice"]
-    D --> E["User selects one"]
-    E --> F{"Requires Verification?"}
-    F -->|"Yes"| G["OTP Verification Flow"]
-    G --> H["Place order in DynamoDB"]
-    F -->|"No (info only)"| I["Provide details"]
-    H --> J["📩 SMS confirmation<br/>with order details"]
-```
-
----
-
-## 5. Verification & Security
-
-For **transactional actions** (placing orders, bookings, accessing personal data), verification is mandatory.
-
-### OTP Verification Flow
+### 6.1 Session Lifecycle
 
 ```mermaid
 sequenceDiagram
-    participant U as 📱 User
-    participant O as ⚡ Orchestrator
-    participant SNS as 📩 SNS
-    participant DB as 💾 DynamoDB
+    participant Call as Incoming Call
+    participant DDB as DynamoDB
+    participant Session as Session Object
 
-    O->>O: Action requires verification
-    O->>SNS: Send OTP to user's phone
-    SNS->>U: 📩 SMS: "Your OTP is 4832"
-    Note over O: Polly says: "Aapke phone par<br/>OTP bheja gaya hai.<br/>Kripya OTP bataiye."
-    U->>O: "4-8-3-2"
-    O->>DB: Verify OTP
-    DB->>O: ✅ Match
-    O->>O: Mark session as verified
-    O->>O: Proceed with transaction
-```
-
-**Security rules:**
-- OTP expires in 5 minutes
-- Max 3 attempts per session
-- Phone number = identity (caller ID from Connect)
-- Sensitive data (Aadhaar) requires OTP every time
-- Non-sensitive queries (scheme info, crop prices) need **no verification**
-
-### Verification Matrix
-
-| Action | Verification Needed? | Method |
-|---|---|---|
-| Ask about a scheme | ❌ No | — |
-| Check crop prices | ❌ No | — |
-| Ask general question | ❌ No | — |
-| Place an order | ✅ Yes | OTP via SMS |
-| Book a train ticket | ✅ Yes | OTP via SMS |
-| Download Aadhaar | ✅ Yes | OTP via SMS |
-| Check bank balance | ✅ Yes | OTP via SMS |
-
----
-
-## 6. Data Architecture
-
-### DynamoDB Tables
-
-```mermaid
-erDiagram
-    SESSIONS {
-        string session_id PK
-        string phone_number
-        string language
-        string current_intent
-        string current_module
-        string module_state
-        string conversation_history
-        boolean verified
-        string started_at
-        string last_active
-        int ttl
-    }
-
-    USERS {
-        string phone_number PK
-        string name
-        string language_preference
-        string district
-        string state
-        string past_sessions
-        string preferences
-        string created_at
-    }
-
-    ORDERS {
-        string order_id PK
-        string phone_number
-        string product_id
-        string status
-        int amount
-        string delivery_address
-        string created_at
-    }
-
-    SCHEME_QUERIES {
-        string query_id PK
-        string phone_number
-        string scheme_name
-        string query_type
-        string response_summary
-        string queried_at
-    }
-
-    MANDI_PRICES {
-        string crop_city PK
-        string crop_name
-        string city
-        int price_per_kg
-        string last_updated
-        int ttl
-    }
-
-    USERS ||--o{ SESSIONS : "has-many"
-    USERS ||--o{ ORDERS : "places"
-    USERS ||--o{ SCHEME_QUERIES : "asks"
-```
-
-### S3 Buckets
-
-| Bucket | Contents | Access Pattern |
-|---|---|---|
-| `bharatvani-knowledge-base` | Government schemes JSON, Agriculture KB, FAQ data | Read by Bedrock via RAG at query time |
-| `bharatvani-assets` | Voice prompts, SSML templates | Read by Polly/Connect |
-
----
-
-## 7. Multi-Language Pipeline
-
-```mermaid
-graph TD
-    A["User speaks in<br/>any Indian language"] --> B["Amazon Transcribe<br/>(auto-detect language)"]
-    B --> C["Detected: hi-IN (Hindi)"]
-    C --> D["Orchestrator stores<br/>language in session"]
-    D --> E["Bedrock system prompt:<br/>'Respond in Hindi'"]
-    E --> F["AI generates Hindi response"]
-    F --> G["Polly uses Hindi voice<br/>(Aditi - Neural)"]
-    G --> H["User hears natural Hindi"]
-```
-
-**Supported languages (Phase 1):**
-
-| Language | Transcribe | Polly Voice | Code |
-|---|---|---|---|
-| Hindi | ✅ | Aditi (Neural) | `hi-IN` |
-| English (Indian) | ✅ | Aditi (Neural) | `en-IN` |
-| Tamil | ✅ | Available | `ta-IN` |
-| Telugu | ✅ | Available | `te-IN` |
-| Bengali | ✅ | Available | `bn-IN` |
-| Marathi | ✅ | Available | `mr-IN` |
-
-**Code-mixing handled:** Bedrock naturally understands Hindi-English mix ("mujhe train ticket book karna hai").
-
----
-
-## 8. System Prompt Design
-
-The Bedrock system prompt is the **soul of BharatVani**. Here's the architecture:
-
-```
-┌─────────────────────────────────────────┐
-│           SYSTEM PROMPT                 │
-├─────────────────────────────────────────┤
-│ 1. Identity & Personality               │
-│    "You are BharatVani, a helpful       │
-│     voice assistant for Indian users"    │
-│                                         │
-│ 2. Language Rules                        │
-│    "Always respond in {session.lang}"   │
-│    "Keep responses under 30 words"       │
-│    "Use simple, spoken language"         │
-│                                         │
-│ 3. Output Format                         │
-│    "Always include structured JSON       │
-│     with intent + entities"              │
-│                                         │
-│ 4. Service Knowledge                     │
-│    Injected per-query from S3 KB         │
-│    (RAG: relevant scheme/product data)   │
-│                                         │
-│ 5. Conversation History                  │
-│    Last 10 turns from session            │
-│                                         │
-│ 6. Safety Rules                          │
-│    "Never share OTPs or personal data"  │
-│    "Never make false promises"           │
-│    "Always suggest offline fallback"     │
-└─────────────────────────────────────────┘
-```
-
----
-
-## 9. Scalability Design
-
-```mermaid
-graph TD
-    subgraph "Why This Scales"
-        A["Amazon Connect"] -->|"Auto-scales to<br/>millions of calls"| B["No capacity planning"]
-        C["Lambda Functions"] -->|"Serverless<br/>0 to ∞ automatically"| D["Pay per invocation"]
-        E["DynamoDB"] -->|"On-demand capacity<br/>single-digit ms latency"| F["No DB management"]
-        G["Bedrock"] -->|"Managed AI<br/>no GPU management"| H["Just API calls"]
+    Call->>DDB: Create session (phone_number, timestamp)
+    DDB->>Session: session_id = uuid
+    
+    loop Each Utterance
+        Session->>Session: Append to conversation_history
+        Session->>Session: Update current_intent, module_state
+        Session->>DDB: Save updated session
     end
+    
+    Note over Session: TTL = 30 minutes after last_active
+    
+    Call->>DDB: Mark session as ended
+    DDB->>DDB: Auto-delete after TTL expires
 ```
 
-**Cost at scale:**
+### 6.2 Knowledge Base Structure (S3)
 
-| Scale | Calls/Day | Monthly AWS Cost (est.) | Revenue (est.) |
-|---|---|---|---|
-| Pilot | 1,000 | ₹15,000 | — |
-| Launch | 100,000 | ₹8,00,000 | ₹20,00,000 |
-| Scale | 10,00,000 | ₹60,00,000 | ₹3,00,00,000 |
+```
+bharatvani-knowledge-base/
+├── schemes/
+│   ├── pm_kisan.json
+│   ├── ayushman_bharat.json
+│   ├── ujjwala_yojana.json
+│   ├── pm_awas_yojana.json
+│   └── ... (30+ schemes)
+├── agriculture/
+│   ├── crop_calendar.json
+│   ├── farming_tips.json
+│   └── regional_crops.json
+├── products/
+│   └── catalog.json
+└── system/
+    ├── welcome_prompts.json
+    └── error_messages.json
+```
 
-Every single component is **serverless** — zero servers to manage, zero capacity to pre-plan, costs scale linearly with usage.
+Each scheme file contains structured, multilingual data:
+
+```json
+{
+  "id": "pm_kisan",
+  "name": {
+    "en": "PM-KISAN Samman Nidhi",
+    "hi": "पीएम-किसान सम्मान निधि"
+  },
+  "benefit": "₹6,000 per year in 3 installments",
+  "eligibility": [
+    "Must own cultivable agricultural land",
+    "No land size restriction",
+    "Must have Aadhaar card"
+  ],
+  "documents_required": ["Aadhaar Card", "Land Papers", "Bank Account"],
+  "how_to_apply": "Visit nearest CSC center or pmkisan.gov.in",
+  "website": "https://pmkisan.gov.in",
+  "helpline": "155261"
+}
+```
 
 ---
 
-## 10. Error Handling & Resilience
+## 7. Security Design
+
+### 7.1 Verification Tiers
 
 ```mermaid
 graph TD
-    A["Error Occurs"] --> B{"What type?"}
-    B -->|"Transcribe failed<br/>(noisy audio)"| C["Polly: 'Samajh nahi aaya,<br/>kripya dobara bataiye'"]
-    B -->|"Bedrock timeout"| D["Retry once, then:<br/>'Thoda wait karein...'"]
-    B -->|"External API down<br/>(Mandi, Weather)"| E["Return cached data<br/>with disclaimer"]
-    B -->|"OTP expired"| F["Polly: 'OTP expire ho gaya,<br/>naya OTP bhejein?'"]
-    B -->|"Unknown intent"| G["Bedrock General Q&A<br/>fallback"]
-    C --> H["Never say 'error'<br/>or 'system failure'"]
-    D --> H
-    E --> H
-    F --> H
-    G --> H
+    A["User Request"] --> B{"Action Type?"}
+    B -->|"Read-Only / Information"| C["✅ No Verification<br/>Respond immediately"]
+    B -->|"Transaction / Sensitive Data"| D["🔐 OTP Required"]
+    D --> E["Generate 4-digit OTP"]
+    E --> F["Store hashed OTP in DynamoDB<br/>TTL = 5 minutes"]
+    F --> G["Send OTP via SNS"]
+    G --> H["User speaks OTP"]
+    H --> I{"Match?"}
+    I -->|"Yes"| J["✅ Proceed with transaction"]
+    I -->|"No (attempt < 3)"| K["Ask to retry"]
+    I -->|"No (attempt = 3)"| L["❌ Block and suggest callback"]
 ```
 
-**Key principle:** The user should **never hear technical jargon**. Every failure is communicated as a friendly, human sentence in their language.
+### 7.2 Data Privacy
+
+| Data Type | Storage Policy |
+|---|---|
+| Phone number | Stored (user identity) |
+| Conversation history | Stored for session duration, auto-deleted via TTL |
+| OTPs | Hashed, auto-deleted after 5 minutes |
+| Aadhaar / sensitive IDs | **Never stored** — processed in-memory only |
+| Order details | Stored with user consent |
 
 ---
 
-## 11. Complete AWS Service Map
+## 8. Multilingual Design
 
-| AWS Service | Role in BharatVani | Why This Service |
-|---|---|---|
-| **Amazon Connect** | Toll-free number, call routing, IVR | Purpose-built for contact centers, auto-scales |
-| **Amazon Transcribe** | Real-time voice → text | 22 Indian language support, streaming mode |
-| **Amazon Bedrock** | AI brain (understanding + generation) | Claude 3.5 Sonnet, managed, no infra |
-| **Amazon Polly** | Text → human-like voice | Neural voices, SSML, Indian language voices |
-| **AWS Lambda** | All business logic (orchestrator, router, modules) | Serverless, pay-per-use, auto-scales |
-| **Amazon DynamoDB** | Sessions, users, orders, cached data | Single-digit ms, serverless, TTL for cleanup |
-| **Amazon S3** | Knowledge base storage (schemes, agriculture) | Cheap, durable, integrates with Bedrock |
-| **Amazon SNS** | SMS (OTP + confirmations) | Reliable SMS delivery across India |
-| **Amazon CloudWatch** | Logging, monitoring, alarms | Operational visibility, debugging |
-| **AWS IAM** | Service-to-service security | Least-privilege per Lambda |
-
----
-
-## 12. Adding a New Service (Extensibility)
-
-This is what makes BharatVani a **platform**, not just a product.
+### Language Pipeline
 
 ```mermaid
 graph LR
-    A["Step 1:<br/>Create new Lambda<br/>(e.g., Healthcare Module)"] --> B["Step 2:<br/>Add intent mapping<br/>in Service Router"]
-    B --> C["Step 3:<br/>Add knowledge to S3<br/>(if needed)"]
-    C --> D["Step 4:<br/>Update Bedrock system<br/>prompt with new intent"]
-    D --> E["✅ Done!<br/>Users can now ask<br/>health questions"]
+    subgraph "Detection"
+        A["User Voice"] --> B["Transcribe auto-detect"]
+        B --> C["Language: hi-IN"]
+    end
+    
+    subgraph "Processing"
+        C --> D["Bedrock system prompt:<br/>Respond in Hindi"]
+        D --> E["Hindi response generated"]
+    end
+    
+    subgraph "Output"
+        E --> F["Polly: Aditi voice<br/>(Hindi Neural)"]
+        F --> G["Natural Hindi speech"]
+    end
 ```
 
-**Time to add a new service: ~2 hours.**
+### Supported Languages
 
-This modular architecture means BharatVani can support **unlimited services** — government, private, healthcare, education, banking — all through the same phone number.
+| Phase | Languages | Coverage |
+|---|---|---|
+| **Phase 1 (Demo)** | Hindi, English | ~60% of India |
+| **Phase 2 (Launch)** | + Tamil, Telugu, Bengali, Marathi | ~85% of India |
+| **Phase 3 (Scale)** | + Gujarati, Kannada, Malayalam, Punjabi, Odia, Assamese | ~97% of India |
+
+### Code-Mixing Support
+
+Indian users naturally mix languages. BharatVani handles this:
+
+| User Says | AI Understands |
+|---|---|
+| "Mujhe train ticket book karna hai" | Intent: `book_ticket` (Hindi-English mix) |
+| "PM-KISAN ka status check karo" | Intent: `govt_scheme_query` (Hindi with English terms) |
+| "Kal weather kaisa rahega?" | Intent: `weather_query` (Hindi-English mix) |
 
 ---
 
-## 13. Architecture Principles Summary
+## 9. Extensibility Design
 
-| Principle | How We Follow It |
+BharatVani is designed as a **platform**, not a single-purpose tool. Any new service can be added without changing the core system.
+
+### Adding a New Service: 4 Steps
+
+```mermaid
+graph TD
+    A["1️⃣ Write new Lambda function<br/>with service logic"] --> B["2️⃣ Register intent mapping<br/>in Service Router config"]
+    B --> C["3️⃣ Upload knowledge data<br/>to S3 (if needed)"]
+    C --> D["4️⃣ Update Bedrock system<br/>prompt with new intent"]
+    D --> E["✅ Service is LIVE<br/>Users can access it immediately"]
+```
+
+### Planned Service Roadmap
+
+```
+NOW (Hackathon)          NEXT (3 months)           FUTURE (1 year)
+─────────────────        ─────────────────         ─────────────────
+✅ General Q&A           💳 Banking Services       🏥 Telemedicine
+✅ Govt Schemes          📋 Ration Card Status     📚 Education Portal
+✅ Farmer Assistant      💼 Job Listings           🏦 Loan Applications
+✅ E-Commerce Demo       🔧 Skill Training         🚌 Bus Booking
+                         📱 Mobile Recharge         🏠 Property Registration
+```
+
+---
+
+## 10. Demo Application Design
+
+For the hackathon demo, we build a **lightweight web application** that:
+1. Acts as the backend for transactional services
+2. Shows real-time updates as the AI processes voice commands
+3. Provides a visual dashboard for judges to follow along
+
+### Demo App Architecture
+
+```mermaid
+graph TB
+    subgraph "Voice Channel"
+        USER["📱 User on Phone"]
+        BV["BharatVani AI Pipeline"]
+    end
+    
+    subgraph "Demo App"
+        API["REST API<br/>(Lambda + API Gateway)"]
+        WEB["Live Dashboard<br/>(Real-time updates)"]
+        DB["Product Catalog<br/>& Orders (DynamoDB)"]
+    end
+
+    USER -->|"Voice"| BV
+    BV -->|"API Call"| API
+    API --> DB
+    DB --> API
+    API -->|"Response"| BV
+    BV -->|"Voice + SMS"| USER
+    DB -->|"Real-time stream"| WEB
+    WEB -->|"Judges see orders<br/>appear in real-time"| WEB
+```
+
+### What Judges See on Screen
+
+While the user speaks on the phone, the dashboard shows:
+- Live transcription of what the user is saying
+- AI's detected intent and entities
+- Order being created in real-time
+- SMS delivery confirmation
+
+**This creates a "wow" moment** — judges hear the conversation AND see it happening live on screen.
+
+---
+
+## 11. Cost Architecture
+
+### Per-Call Cost Breakdown
+
+| Component | Cost per Call (3 min avg) |
 |---|---|
-| **Zero Barrier** | Works on any phone, any network, costs nothing to user |
-| **Serverless Everything** | No servers to manage, infinite scale |
-| **Modular Services** | Each service = independent Lambda, plug and play |
-| **Language First** | Auto-detect, respond in same language, natural voice |
-| **Fail Gracefully** | Never expose errors, always give human-friendly fallback |
-| **Security by Design** | OTP for transactions, caller ID verification, IAM least-privilege |
-| **Data Minimalism** | Store only what's needed, TTL auto-cleanup |
-| **Platform Thinking** | Adding a new service takes hours, not weeks |
+| Amazon Connect | ₹0.50 |
+| Amazon Transcribe | ₹0.40 |
+| Amazon Bedrock | ₹0.30 |
+| Amazon Polly | ₹0.10 |
+| Lambda + DynamoDB | ₹0.05 |
+| SNS (SMS) | ₹0.10 |
+| **Total** | **₹1.45** |
+
+### Revenue Model
+
+```
+                    Users pay ₹0
+                         │
+            ┌────────────┼────────────┐
+            ▼            ▼            ▼
+    Govt Subscription  Txn Fees    Sponsorships
+    ₹10/user/month     ₹2/txn     ₹2-5 Cr/month
+    (Digital India     (Service    (Companies reach
+     budget)           providers)   rural India)
+```
+
+**Unit economics:** Revenue per call (₹2-5) > Cost per call (₹1.45) = **Profitable from Day 1**
+
+---
+
+## 12. Why This Design Wins
+
+| Evaluation Criteria | How BharatVani Scores |
+|---|---|
+| **Innovation** | First voice-first internet access platform — no competition in this category |
+| **Technical Depth** | 10 AWS services, serverless, RAG, real-time streaming, NLU — deep AWS integration |
+| **Social Impact** | 700M people gain digital access — largest inclusion opportunity in the world |
+| **Feasibility** | Works TODAY on existing infrastructure — no new devices, no behavior change |
+| **Scalability** | Fully serverless, auto-scales from 1 to 10M calls |
+| **Business Viability** | Government-aligned, budget available, profitable unit economics |
+| **Demo Quality** | Live on Nokia phone — tangible, memorable, impressive |
+
+---
+
+*Last Updated: February 15, 2026*
+*Team: BharatVani | Track: AI for Communities, Access & Public Impact*
