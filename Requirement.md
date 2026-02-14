@@ -349,6 +349,6 @@ While internet access remains limited, **voice connectivity is near-universal in
 
 *Built with ❤️ for 700 million Indians who deserve digital access.*
 
-**Team BharatVani** | AI for Bharat Hackathon 2026
+**Team PioneerX** | AI for Bharat Hackathon 2026
 
 </div>
