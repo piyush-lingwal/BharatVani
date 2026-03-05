@@ -5,6 +5,16 @@ Description: >
   Toll-free AI voice service powered by AWS
 
 Globals:
+  HttpApi:
+    CorsConfiguration:
+      AllowOrigins:
+        - '*'
+      AllowHeaders:
+        - Content-Type
+      AllowMethods:
+        - POST
+        - GET
+        - OPTIONS
   Function:
     Timeout: 60
     Runtime: nodejs18.x
@@ -141,6 +151,11 @@ Resources:
           Properties:
             Path: /voice/health
             Method: GET
+        WebChat:
+          Type: HttpApi
+          Properties:
+            Path: /chat
+            Method: POST
       Policies:
         # DynamoDB access
         - DynamoDBCrudPolicy:

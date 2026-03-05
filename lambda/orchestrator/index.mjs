@@ -76,10 +76,10 @@ export async function handler(event) {
     loadMessages();
 
     // ========================================
-    // MODE 1: API Gateway + Twilio webhooks
+    // MODE 1: API Gateway (Twilio voice + Web Chat)
     // ========================================
     if (event.requestContext && (event.httpMethod || event.requestContext.http)) {
-        return await handleTwilioEvent(event);
+        return await handleApiGateway(event);
     }
 
     // ========================================
@@ -120,28 +120,53 @@ export async function handler(event) {
 }
 
 /**
- * Handle Twilio webhook events via API Gateway
+ * Handle all API Gateway requests (Twilio voice + Web Chat)
  */
-async function handleTwilioEvent(event) {
+async function handleApiGateway(event) {
+    const CORS_HEADERS = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Methods': 'POST, GET, OPTIONS'
+    };
+
     try {
         const path = event.path || event.rawPath || event.requestContext?.http?.path || '';
+        const method = event.httpMethod || event.requestContext?.http?.method || '';
+
+        // Handle CORS preflight
+        if (method === 'OPTIONS') {
+            return { statusCode: 200, headers: CORS_HEADERS, body: '' };
+        }
+
         const body = event.isBase64Encoded
             ? Buffer.from(event.body, 'base64').toString('utf-8')
             : (event.body || '');
-        const params = parse(body);
         const queryParams = event.queryStringParameters || {};
 
-        console.log('Twilio path:', path, 'params:', JSON.stringify(params));
+        console.log('API Gateway path:', path, 'method:', method);
+
+        // ---- Web Chat endpoint ----
+        if (path.includes('/chat')) {
+            const jsonBody = JSON.parse(body || '{}');
+            return await handleWebChat(jsonBody, CORS_HEADERS);
+        }
+
+        // ---- Twilio Voice endpoints ----
+        const params = parse(body);
 
         let twimlResponse;
-
         if (path.includes('/voice/incoming')) {
             twimlResponse = await handleIncoming(params);
         } else if (path.includes('/voice/gather')) {
             const sessionId = queryParams.sessionId || '';
             twimlResponse = await handleGather(params, sessionId);
         } else {
-            twimlResponse = `<?xml version="1.0" encoding="UTF-8"?><Response><Say language="hi-IN">BharatVani service active hai.</Say></Response>`;
+            // Health check / default
+            return {
+                statusCode: 200,
+                headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'ok', service: 'BharatVani' })
+            };
         }
 
         return {
@@ -151,13 +176,76 @@ async function handleTwilioEvent(event) {
         };
 
     } catch (err) {
-        console.error('Twilio handler error:', err);
+        console.error('API handler error:', err);
         return {
             statusCode: 200,
-            headers: { 'Content-Type': 'application/xml' },
-            body: `<?xml version="1.0" encoding="UTF-8"?><Response><Say language="hi-IN" voice="Polly.Aditi">Maaf kijiye, kuch problem ho gayi.</Say></Response>`
+            headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ error: 'Maaf kijiye, kuch problem ho gayi.' })
         };
     }
+}
+
+/**
+ * Handle web chat messages
+ */
+async function handleWebChat(body, corsHeaders) {
+    const { message, sessionId: clientSessionId } = body;
+
+    // Start new session if needed
+    let sessionId = clientSessionId;
+    let session = null;
+
+    if (sessionId) {
+        session = await getSession(sessionId);
+    }
+
+    if (!session) {
+        const result = await createSession('web-user');
+        session = result.session;
+        sessionId = session.session_id;
+    }
+
+    // If no message, return welcome
+    if (!message || message.trim() === '') {
+        return {
+            statusCode: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                response: 'Namaste! Main BharatVani hoon. Aap mujhse kuch bhi pooch sakte hain — sarkari yojana, kheti, GK, ya koi bhi sawaal!',
+                sessionId
+            })
+        };
+    }
+
+    console.log(`Web chat [${sessionId}]: "${message}"`);
+
+    // Get conversation history
+    const conversationHistory = session.conversation_history || [];
+
+    // Call Bedrock AI
+    const aiResponse = await callBedrock(message, conversationHistory, 'hi-IN');
+    const responseText = aiResponse.response_text || 'Maaf kijiye, kripya dobara likhe.';
+
+    // Update session with conversation
+    const updatedHistory = [
+        ...conversationHistory,
+        { role: 'user', text: message },
+        { role: 'assistant', text: responseText }
+    ].slice(-10);
+
+    await updateSession(sessionId, {
+        conversation_history: updatedHistory,
+        turn_count: (session.turn_count || 0) + 1
+    });
+
+    return {
+        statusCode: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            response: responseText,
+            sessionId
+        })
+    };
 }
 
 /**
