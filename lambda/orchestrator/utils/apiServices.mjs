@@ -1,6 +1,6 @@
 /**
  * BharatVani — Real-Time API Services
- * Fetches live data: weather, news, gold/silver prices
+ * Fetches live data: weather, news, gold/silver prices, Tavily web search
  */
 
 // API keys are read inside each function (not module-level) to ensure Lambda env vars are always fresh
@@ -127,6 +127,33 @@ export function detectLiveDataNeed(userText) {
         needs.push({ type: 'gold' });
     }
 
+    // Tavily web search — for anything needing live internet data
+    // Only trigger if NOT already handled by specific APIs above
+    const webSearchWords = [
+        // Prices & rates
+        'petrol', 'diesel', 'lpg', 'rasoi gas', 'gas cylinder', 'bijli', 'electricity bill',
+        'paani ka bill', 'sabzi', 'mandi', 'gehu', 'dhan', 'chawal', 'fasal', 'bhav',
+        // Transport
+        'train', 'rail', 'bus', 'flight', 'hawai jahaz', 'ticket', 'pnr', 'late',
+        // Government updates
+        'yojana', 'scheme', 'sarkar', 'government', 'pm kisan', 'ration', 'pension',
+        'aadhar', 'pan card', 'voter id', 'driving licence', 'paisa', 'kist', 'installment',
+        // Jobs & employment
+        'naukri', 'job', 'bharti', 'vacancy', 'rojgar', 'berozgaari',
+        // Health
+        'hospital', 'dawai', 'medicine', 'vaccine', 'doctor', 'ayushman',
+        // Finance
+        'bank', 'loan', 'mudra', 'byaj', 'interest', 'sensex', 'share', 'market',
+        // Devanagari
+        'पेट्रोल', 'डीजल', 'गैस सिलेंडर', 'बिजली', 'सब्जी', 'मंडी', 'गेहूं', 'धान',
+        'ट्रेन', 'रेल', 'बस', 'टिकट', 'योजना', 'सरकार', 'राशन', 'पेंशन',
+        'नौकरी', 'भर्ती', 'रोजगार', 'अस्पताल', 'दवाई', 'बैंक', 'लोन', 'ब्याज'
+    ];
+    const alreadyCovered = needs.length > 0;
+    if (!alreadyCovered && webSearchWords.some(w => text.includes(w) || userText.includes(w))) {
+        needs.push({ type: 'web_search', query: userText });
+    }
+
     return needs;
 }
 
@@ -247,20 +274,56 @@ export async function getNews() {
  * Fetch gold and silver prices
  */
 export async function getGoldPrice() {
-    // Gold price estimation based on publicly available ranges
-    // For real-time, integrate with a price API when key is available
-    try {
-        const url = 'https://www.goldapi.io/api/XAU/INR';
-        // Without API key, provide helpful general info
-        return `Sone ka latest bhav jaanne ke liye apne local sarafa bazaar mein sampark karein ya Google par "gold rate today" search karein. Sona generally 60,000-75,000 rupaye per 10 gram ke beech rehta hai.`;
-    } catch (err) {
-        return `Sone ka bhav abhi available nahi hai. Local sarafa bazaar mein sampark karein.`;
-    }
+    // Use Tavily to get live gold price in India
+    return searchWeb('aaj sone ka bhav India gold rate today per 10 gram INR');
 }
 
 /**
- * Fetch all required live data based on detected needs
+ * Tavily Web Search — real-time internet search for any query
  */
+export async function searchWeb(query) {
+    const TAVILY_API_KEY = process.env.TAVILY_API_KEY || '';
+    console.log('searchWeb called | key present:', !!TAVILY_API_KEY, '| query:', query.substring(0, 50));
+    if (!TAVILY_API_KEY) return '';
+
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000);
+        const response = await fetch('https://api.tavily.com/search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            signal: controller.signal,
+            body: JSON.stringify({
+                api_key: TAVILY_API_KEY,
+                query: query + ' India 2025',
+                search_depth: 'basic',
+                include_answer: true,
+                max_results: 3,
+                include_raw_content: false
+            })
+        });
+        clearTimeout(timeout);
+
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const data = await response.json();
+        console.log('Tavily response received, answer length:', data.answer?.length || 0);
+
+        if (data.answer && data.answer.length > 20) {
+            return 'WEB SEARCH RESULT: ' + data.answer;
+        }
+
+        // Fallback: use top result snippets
+        const snippets = (data.results || []).slice(0, 2)
+            .map(r => r.content ? r.content.substring(0, 250) : '')
+            .filter(Boolean)
+            .join(' | ');
+        return snippets ? 'WEB SEARCH: ' + snippets : '';
+    } catch (err) {
+        console.error('Tavily error:', err.message);
+        return '';
+    }
+}
+
 export async function fetchLiveData(needs) {
     if (needs.length === 0) return '';
 
@@ -270,6 +333,7 @@ export async function fetchLiveData(needs) {
             case 'weather': return getWeather(need.city);
             case 'news': return getNews();
             case 'gold': return getGoldPrice();
+            case 'web_search': return searchWeb(need.query);
             default: return Promise.resolve('');
         }
     });

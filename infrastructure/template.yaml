@@ -39,6 +39,10 @@ Parameters:
     Type: String
     Default: ''
     Description: NewsAPI key (free at newsapi.org)
+  TavilyApiKey:
+    Type: String
+    Default: ''
+    Description: Tavily AI search key (free at tavily.com)
 
 Resources:
 
@@ -145,6 +149,7 @@ Resources:
           ENVIRONMENT: !Ref Environment
           WEATHER_API_KEY: !Ref WeatherApiKey
           NEWS_API_KEY: !Ref NewsApiKey
+          TAVILY_API_KEY: !Ref TavilyApiKey
       Events:
         VoiceIncoming:
           Type: HttpApi
