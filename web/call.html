@@ -611,41 +611,43 @@
             }
         }
 
-        // ===== Text to Speech =====
+        // ===== Text to Speech — chunked to avoid browser TTS truncation =====
         function speakText(text) {
             return new Promise((resolve) => {
+                synth.cancel(); // clear any pending
                 isSpeaking = true;
                 soundWave.classList.add('active');
                 callStatus.textContent = '🔊 Bol rahi hoon...';
 
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'hi-IN';
-                utterance.rate = 0.95;
-                utterance.pitch = 1.1;
+                // Split into sentence-level chunks (browser TTS cuts off long strings)
+                const chunks = text.match(/[^।!?\.]+[।!?\.]?/g)?.filter(c => c.trim().length > 0) || [text];
+                let idx = 0;
 
-                // Try to find Hindi voice
                 const voices = synth.getVoices();
                 const hindiVoice = voices.find(v => v.lang.includes('hi')) || voices.find(v => v.lang.includes('in'));
-                if (hindiVoice) utterance.voice = hindiVoice;
 
-                utterance.onend = () => {
-                    isSpeaking = false;
-                    soundWave.classList.remove('active');
-                    if (isInCall) {
-                        // Auto-listen again — like a real phone call
-                        callStatus.textContent = '🎤 Sun rahi hoon... boliye';
-                        setTimeout(() => { if (isInCall) startListening(); }, 500);
+                function speakChunk() {
+                    if (idx >= chunks.length || !isSpeaking) {
+                        isSpeaking = false;
+                        soundWave.classList.remove('active');
+                        if (isInCall) {
+                            callStatus.textContent = '🎤 Sun rahi hoon... boliye';
+                            setTimeout(() => { if (isInCall) startListening(); }, 500);
+                        }
+                        resolve();
+                        return;
                     }
-                    resolve();
-                };
+                    const utterance = new SpeechSynthesisUtterance(chunks[idx].trim());
+                    utterance.lang = 'hi-IN';
+                    utterance.rate = 0.92;
+                    utterance.pitch = 1.05;
+                    if (hindiVoice) utterance.voice = hindiVoice;
+                    utterance.onend = () => { idx++; speakChunk(); };
+                    utterance.onerror = () => { idx++; speakChunk(); };
+                    synth.speak(utterance);
+                }
 
-                utterance.onerror = () => {
-                    isSpeaking = false;
-                    soundWave.classList.remove('active');
-                    resolve();
-                };
-
-                synth.speak(utterance);
+                speakChunk();
             });
         }
 
