@@ -116,16 +116,17 @@ function extractCity(text) {
  */
 export async function getWeather(city = 'Delhi') {
     if (!WEATHER_API_KEY) {
-        return `Mausam ki jaankari ke liye Indian Meteorological Department helpline 1800-180-1717 par call karein ya mausam.imd.gov.in par dekhein.`;
+        return `Mausam ki jaankari ke liye IMD helpline 1800-180-1717 par call karein.`;
     }
 
     try {
-        const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)},IN&appid=${WEATHER_API_KEY}&units=metric&lang=hi`;
-        const response = await fetch(url);
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000); // 5s timeout
+        const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)},IN&appid=${WEATHER_API_KEY}&units=metric`;
+        const response = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeout);
 
-        if (!response.ok) {
-            return `${city} ka mausam abhi mil nahi raha. IMD helpline 1800-180-1717 par call karein.`;
-        }
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
         const data = await response.json();
         const temp = Math.round(data.main.temp);
@@ -133,12 +134,12 @@ export async function getWeather(city = 'Delhi') {
         const humidity = data.main.humidity;
         const condition = data.weather[0].main;
         const hindiCondition = WEATHER_HINDI[condition] || data.weather[0].description;
-        const windSpeed = Math.round(data.wind.speed * 3.6); // m/s to km/h
+        const windSpeed = Math.round(data.wind.speed * 3.6);
 
-        return `LIVE WEATHER for ${city}: Temperature ${temp}°C (feels like ${feelsLike}°C), ${hindiCondition}, humidity ${humidity}%, wind ${windSpeed} km/h.`;
+        return `LIVE WEATHER ${city}: ${temp}°C (feels ${feelsLike}°C), ${hindiCondition}, humidity ${humidity}%, wind ${windSpeed}km/h.`;
     } catch (err) {
         console.error('Weather API error:', err.message);
-        return `Mausam data abhi available nahi hai. IMD helpline: 1800-180-1717`;
+        return '';
     }
 }
 
@@ -147,26 +148,31 @@ export async function getWeather(city = 'Delhi') {
  */
 export async function getNews() {
     if (!NEWS_API_KEY) {
-        return `Taza khabar ke liye DD News ya All India Radio sunein, ya news.google.com par dekhein.`;
+        return `Taza khabar ke liye DD News ya AIR sunein.`;
     }
 
     try {
-        const url = `https://newsapi.org/v2/top-headlines?country=in&pageSize=3&apiKey=${NEWS_API_KEY}`;
-        const response = await fetch(url);
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
+        const url = `https://newsapi.org/v2/top-headlines?country=in&pageSize=3`;
+        const response = await fetch(url, {
+            signal: controller.signal,
+            headers: { 'X-Api-Key': NEWS_API_KEY }
+        });
+        clearTimeout(timeout);
 
-        if (!response.ok) {
-            return `News abhi load nahi ho rahi. DD News ya All India Radio sunein.`;
-        }
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
         const data = await response.json();
+        if (!data.articles || data.articles.length === 0) return '';
         const headlines = data.articles.slice(0, 3).map((a, i) =>
             `${i + 1}. ${a.title}`
         ).join(' | ');
 
-        return `TODAY'S TOP HEADLINES: ${headlines}`;
+        return `TODAY'S TOP 3 INDIA NEWS: ${headlines}`;
     } catch (err) {
         console.error('News API error:', err.message);
-        return `News service abhi available nahi hai.`;
+        return '';
     }
 }
 
@@ -191,21 +197,19 @@ export async function getGoldPrice() {
 export async function fetchLiveData(needs) {
     if (needs.length === 0) return '';
 
-    const results = [];
-
-    for (const need of needs) {
+    // Run all API calls in parallel for speed
+    const promises = needs.map(need => {
         switch (need.type) {
-            case 'weather':
-                results.push(await getWeather(need.city));
-                break;
-            case 'news':
-                results.push(await getNews());
-                break;
-            case 'gold':
-                results.push(await getGoldPrice());
-                break;
+            case 'weather': return getWeather(need.city);
+            case 'news': return getNews();
+            case 'gold': return getGoldPrice();
+            default: return Promise.resolve('');
         }
-    }
+    });
 
-    return results.join('\n');
+    const results = await Promise.allSettled(promises);
+    return results
+        .filter(r => r.status === 'fulfilled' && r.value)
+        .map(r => r.value)
+        .join('\n');
 }
