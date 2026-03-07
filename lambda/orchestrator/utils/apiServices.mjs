@@ -4,7 +4,7 @@
  */
 
 const WEATHER_API_KEY = process.env.WEATHER_API_KEY || '';
-const NEWS_API_KEY = process.env.NEWS_API_KEY || '';
+const NEWS_API_KEY = process.env.NEWS_API_KEY || ''; // kept for reference, using RSS instead
 
 // Hindi weather condition map
 const WEATHER_HINDI = {
@@ -115,20 +115,23 @@ function extractCity(text) {
  * Fetch weather from OpenWeatherMap
  */
 export async function getWeather(city = 'Delhi') {
+    console.log('getWeather called for city:', city, '| key present:', !!WEATHER_API_KEY);
     if (!WEATHER_API_KEY) {
         return `Mausam ki jaankari ke liye IMD helpline 1800-180-1717 par call karein.`;
     }
 
     try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 5000); // 5s timeout
+        const timeout = setTimeout(() => controller.abort(), 5000);
         const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)},IN&appid=${WEATHER_API_KEY}&units=metric`;
+        console.log('Fetching weather URL:', url.replace(WEATHER_API_KEY, 'HIDDEN'));
         const response = await fetch(url, { signal: controller.signal });
         clearTimeout(timeout);
 
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
         const data = await response.json();
+        console.log('Weather data received:', data.main?.temp, data.weather?.[0]?.main);
         const temp = Math.round(data.main.temp);
         const feelsLike = Math.round(data.main.feels_like);
         const humidity = data.main.humidity;
@@ -147,31 +150,37 @@ export async function getWeather(city = 'Delhi') {
  * Fetch top Indian news headlines
  */
 export async function getNews() {
-    if (!NEWS_API_KEY) {
-        return `Taza khabar ke liye DD News ya AIR sunein.`;
-    }
-
+    console.log('getNews called — using NDTV RSS feed');
     try {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 5000);
-        const url = `https://newsapi.org/v2/top-headlines?country=in&pageSize=3`;
+        // NDTV India RSS — free, no auth, works from servers
+        const url = 'https://feeds.feedburner.com/ndtvnews-india-news';
         const response = await fetch(url, {
             signal: controller.signal,
-            headers: { 'X-Api-Key': NEWS_API_KEY }
+            headers: { 'User-Agent': 'Mozilla/5.0 BharatVani/1.0' }
         });
         clearTimeout(timeout);
 
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-        const data = await response.json();
-        if (!data.articles || data.articles.length === 0) return '';
-        const headlines = data.articles.slice(0, 3).map((a, i) =>
-            `${i + 1}. ${a.title}`
-        ).join(' | ');
+        const xml = await response.text();
+        // Parse titles from RSS XML
+        const titleMatches = xml.match(/<title><![CDATA[([^\]]+)]]><\/title>/g) ||
+            xml.match(/<title>([^<]+)<\/title>/g) || [];
+        // Skip first (feed title), take next 3 article titles
+        const headlines = titleMatches
+            .slice(1, 4)
+            .map((t, i) => {
+                const text = t.replace(/<title>|<\/title>|<![CDATA[|]]>/g, '').trim();
+                return `${i + 1}. ${text}`;
+            })
+            .join(' | ');
 
-        return `TODAY'S TOP 3 INDIA NEWS: ${headlines}`;
+        console.log('News headlines fetched:', headlines.substring(0, 100));
+        return headlines ? `TODAY'S TOP INDIA NEWS: ${headlines}` : '';
     } catch (err) {
-        console.error('News API error:', err.message);
+        console.error('News RSS error:', err.message);
         return '';
     }
 }
