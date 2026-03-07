@@ -1,0 +1,11 @@
+{
+    "name": "National Food Security Act (Ration)",
+    "hindi_name": "राष्ट्रीय खाद्य सुरक्षा अधिनियम",
+    "category": "food_security",
+    "summary": "Subsidized food grains (rice ₹3/kg, wheat ₹2/kg) through ration shops",
+    "hindi_summary": "Ration ki dukaan se sasta anaj — chawal 3 rupaye kilo, gehu 2 rupaye kilo",
+    "benefits": "Rice at ₹3/kg, wheat at ₹2/kg, coarse grains at ₹1/kg, 5kg per person per month",
+    "eligibility": "BPL families, Antyodaya card holders, priority households",
+    "helpline": "1800-345-6789",
+    "website": "nfsa.gov.in"
+}

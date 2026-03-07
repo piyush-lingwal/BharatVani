@@ -1,0 +1,11 @@
+{
+    "name": "e-Shram Card",
+    "hindi_name": "ई-श्रम कार्ड",
+    "category": "labor",
+    "summary": "National database for unorganized workers — insurance and scheme benefits",
+    "hindi_summary": "Asangathit kshetra ke mazdooron ka panjikaran — bima aur yojana ka labh",
+    "benefits": "₹2 lakh accidental insurance, access to government schemes, UAN number",
+    "eligibility": "Unorganized workers — construction, domestic, agriculture, street vendors, gig workers",
+    "helpline": "14434",
+    "website": "eshram.gov.in"
+}
