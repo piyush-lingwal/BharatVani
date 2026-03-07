@@ -22,8 +22,9 @@ const WEATHER_HINDI = {
 
 // Major Indian cities with common Hindi names
 const CITY_MAP = {
-    'dilli': 'Delhi', 'delhi': 'Delhi', 'nai dilli': 'New Delhi',
-    'mumbai': 'Mumbai', 'bambai': 'Mumbai',
+    // Romanized
+    'dilli': 'Delhi', 'delhi': 'Delhi', 'nai dilli': 'New Delhi', 'new delhi': 'New Delhi',
+    'mumbai': 'Mumbai', 'bambai': 'Mumbai', 'bombay': 'Mumbai',
     'kolkata': 'Kolkata', 'calcutta': 'Kolkata',
     'chennai': 'Chennai', 'madras': 'Chennai',
     'bangalore': 'Bangalore', 'bengaluru': 'Bangalore',
@@ -55,7 +56,35 @@ const CITY_MAP = {
     'mp': 'Bhopal', 'madhya pradesh': 'Bhopal',
     'goa': 'Goa',
     'noida': 'Noida',
-    'gurgaon': 'Gurgaon', 'gurugram': 'Gurgaon'
+    'gurgaon': 'Gurgaon', 'gurugram': 'Gurgaon',
+    // Devanagari — speech recognition returns these
+    'दिल्ली': 'Delhi', 'नई दिल्ली': 'New Delhi',
+    'मुंबई': 'Mumbai', 'बंबई': 'Mumbai',
+    'कोलकाता': 'Kolkata',
+    'चेन्नई': 'Chennai',
+    'बेंगलुरु': 'Bangalore', 'बैंगलोर': 'Bangalore',
+    'हैदराबाद': 'Hyderabad',
+    'पुणे': 'Pune',
+    'जयपुर': 'Jaipur',
+    'लखनऊ': 'Lucknow',
+    'अहमदाबाद': 'Ahmedabad',
+    'चंडीगढ़': 'Chandigarh',
+    'पटना': 'Patna',
+    'भोपाल': 'Bhopal',
+    'देहरादून': 'Dehradun',
+    'शिमला': 'Shimla',
+    'श्रीनगर': 'Srinagar',
+    'वाराणसी': 'Varanasi', 'बनारस': 'Varanasi', 'काशी': 'Varanasi',
+    'आगरा': 'Agra',
+    'अमृतसर': 'Amritsar',
+    'इंदौर': 'Indore',
+    'नागपुर': 'Nagpur',
+    'गुवाहाटी': 'Guwahati',
+    'रांची': 'Ranchi',
+    'कोच्चि': 'Kochi',
+    'गोवा': 'Goa',
+    'नोएडा': 'Noida',
+    'गुड़गांव': 'Gurgaon', 'गुरुग्राम': 'Gurgaon'
 };
 
 /**
@@ -65,25 +94,36 @@ export function detectLiveDataNeed(userText) {
     const text = userText.toLowerCase();
     const needs = [];
 
-    // Weather keywords
-    const weatherWords = ['mausam', 'weather', 'thand', 'garmi', 'barish', 'baarish', 'taapmaan',
-        'temperature', 'dhoop', 'kohra', 'fog', 'hawa', 'toofan', 'aandhi'];
-    if (weatherWords.some(w => text.includes(w))) {
-        const city = extractCity(text);
+    // Weather keywords — Latin + Devanagari (speech recognition returns Devanagari for hi-IN)
+    const weatherWords = [
+        'mausam', 'weather', 'thand', 'garmi', 'barish', 'baarish', 'taapmaan',
+        'temperature', 'dhoop', 'kohra', 'fog', 'hawa', 'toofan', 'aandhi',
+        'मौसम', 'बारिश', 'बरसात', 'ठंड', 'गर्मी', 'तापमान', 'धूप',
+        'कोहरा', 'हवा', 'तूफान', 'आंधी', 'बर्फ', 'ओले'
+    ];
+    if (weatherWords.some(w => text.includes(w) || userText.includes(w))) {
+        const city = extractCity(userText);
         needs.push({ type: 'weather', city });
     }
 
-    // News keywords
-    const newsWords = ['khabar', 'news', 'samachar', 'taza khabar', 'headline', 'aaj ki khabar',
-        'kya chal raha', 'kya ho raha', 'current affairs'];
-    if (newsWords.some(w => text.includes(w))) {
+    // News keywords — Latin + Devanagari
+    const newsWords = [
+        'khabar', 'news', 'samachar', 'taza khabar', 'headline', 'aaj ki khabar',
+        'kya chal raha', 'kya ho raha', 'current affairs',
+        'खबर', 'खबरें', 'समाचार', 'ताजा खबर', 'आज की खबर', 'न्यूज़', 'न्यूज'
+    ];
+    if (newsWords.some(w => text.includes(w) || userText.includes(w))) {
         needs.push({ type: 'news' });
     }
 
-    // Gold/silver keywords
-    const goldWords = ['sone', 'sona', 'gold', 'chandi', 'silver', 'bhav', 'rate',
-        'sone ka dam', 'sone ki keemat', 'chandi ka dam'];
-    if (goldWords.some(w => text.includes(w)) && !text.includes('fasal') && !text.includes('gehu')) {
+    // Gold/silver keywords — Latin + Devanagari
+    const goldWords = [
+        'sone', 'sona', 'gold', 'chandi', 'silver', 'bhav', 'sone ka dam',
+        'सोना', 'सोने', 'चांदी', 'सोने का भाव', 'सोने की कीमत', 'गोल्ड'
+    ];
+    if (goldWords.some(w => text.includes(w) || userText.includes(w))
+        && !text.includes('fasal') && !text.includes('gehu')
+        && !userText.includes('फसल') && !userText.includes('गेहूं')) {
         needs.push({ type: 'gold' });
     }
 
@@ -94,15 +134,28 @@ export function detectLiveDataNeed(userText) {
  * Extract city name from Hindi text
  */
 function extractCity(text) {
-    const words = text.toLowerCase().split(/\s+/);
+    const lower = text.toLowerCase();
+    const words = lower.split(/\s+/);
+    const origWords = text.split(/\s+/); // original for Devanagari
 
-    // Check 2-word combinations first
+    // Check 2-word Devanagari combos
+    for (let i = 0; i < origWords.length - 1; i++) {
+        const twoWord = origWords[i] + ' ' + origWords[i + 1];
+        if (CITY_MAP[twoWord]) return CITY_MAP[twoWord];
+    }
+
+    // Check single Devanagari words
+    for (const word of origWords) {
+        if (CITY_MAP[word]) return CITY_MAP[word];
+    }
+
+    // Check 2-word romanized combos
     for (let i = 0; i < words.length - 1; i++) {
         const twoWord = words[i] + ' ' + words[i + 1];
         if (CITY_MAP[twoWord]) return CITY_MAP[twoWord];
     }
 
-    // Check single words
+    // Check single romanized words
     for (const word of words) {
         if (CITY_MAP[word]) return CITY_MAP[word];
     }
