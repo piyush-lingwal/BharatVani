@@ -8,6 +8,7 @@ import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { detectLiveDataNeed, fetchLiveData } from './apiServices.mjs';
 
 const bedrockClient = new BedrockRuntimeClient({
     region: process.env.AWS_REGION || 'ap-south-1'
@@ -135,7 +136,7 @@ async function loadFarmingTips() {
 /**
  * Build the full prompt with context
  */
-async function buildPrompt(userText, conversationHistory, language) {
+async function buildPrompt(userText, conversationHistory, language, liveData = '') {
     const systemPrompt = loadSystemPrompt();
     const schemes = await loadSchemes();
 
@@ -148,6 +149,11 @@ async function buildPrompt(userText, conversationHistory, language) {
     let finalPrompt = systemPrompt
         .replace('{SCHEME_CONTEXT}', `\nAvailable schemes: ${schemeNames}`)
         .replace('{AGRICULTURE_CONTEXT}', '\nCrop prices and farming tips available on demand.');
+
+    // Inject live data if available
+    if (liveData) {
+        finalPrompt += `\n\nLIVE DATA (use this to answer accurately):\n${liveData}`;
+    }
 
     // Add last 6 conversation turns for context
     const recentHistory = conversationHistory.slice(-6);
@@ -167,7 +173,16 @@ async function buildPrompt(userText, conversationHistory, language) {
  * Call Bedrock with the user's message — single call for intent + response
  */
 export async function callBedrock(userText, conversationHistory = [], language = 'hi-IN') {
-    const systemPrompt = await buildPrompt(userText, conversationHistory, language);
+    // Detect if query needs real-time data
+    const liveDataNeeds = detectLiveDataNeed(userText);
+    let liveData = '';
+    if (liveDataNeeds.length > 0) {
+        console.log('Live data needed:', liveDataNeeds.map(n => n.type).join(', '));
+        liveData = await fetchLiveData(liveDataNeeds);
+        console.log('Live data fetched:', liveData.substring(0, 100));
+    }
+
+    const systemPrompt = await buildPrompt(userText, conversationHistory, language, liveData);
 
     const payload = {
         anthropic_version: 'bedrock-2023-05-31',

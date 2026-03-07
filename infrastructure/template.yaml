@@ -31,6 +31,14 @@ Parameters:
   BedrockModelId:
     Type: String
     Default: apac.anthropic.claude-3-5-sonnet-20241022-v2:0
+  WeatherApiKey:
+    Type: String
+    Default: ''
+    Description: OpenWeatherMap API key (free at openweathermap.org)
+  NewsApiKey:
+    Type: String
+    Default: ''
+    Description: NewsAPI key (free at newsapi.org)
 
 Resources:
 
@@ -135,6 +143,8 @@ Resources:
           AUDIO_BUCKET: !Ref KnowledgeBucket
           BEDROCK_MODEL_ID: !Ref BedrockModelId
           ENVIRONMENT: !Ref Environment
+          WEATHER_API_KEY: !Ref WeatherApiKey
+          NEWS_API_KEY: !Ref NewsApiKey
       Events:
         VoiceIncoming:
           Type: HttpApi
