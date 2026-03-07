@@ -3,8 +3,7 @@
  * Fetches live data: weather, news, gold/silver prices
  */
 
-const WEATHER_API_KEY = process.env.WEATHER_API_KEY || '';
-const NEWS_API_KEY = process.env.NEWS_API_KEY || ''; // kept for reference, using RSS instead
+// API keys are read inside each function (not module-level) to ensure Lambda env vars are always fresh
 
 // Hindi weather condition map
 const WEATHER_HINDI = {
@@ -115,7 +114,8 @@ function extractCity(text) {
  * Fetch weather from OpenWeatherMap
  */
 export async function getWeather(city = 'Delhi') {
-    console.log('getWeather called for city:', city, '| key present:', !!WEATHER_API_KEY);
+    const WEATHER_API_KEY = process.env.WEATHER_API_KEY || '';
+    console.log('getWeather called for city:', city, '| key present:', !!WEATHER_API_KEY, '| key length:', WEATHER_API_KEY.length);
     if (!WEATHER_API_KEY) {
         return `Mausam ki jaankari ke liye IMD helpline 1800-180-1717 par call karein.`;
     }
