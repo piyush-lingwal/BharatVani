@@ -289,16 +289,17 @@ export async function searchWeb(query) {
     try {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 8000);
+        const today = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
         const response = await fetch('https://api.tavily.com/search', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             signal: controller.signal,
             body: JSON.stringify({
                 api_key: TAVILY_API_KEY,
-                query: query + ' India 2025',
-                search_depth: 'basic',
+                query: query + ' India ' + today,
+                search_depth: 'advanced',
                 include_answer: true,
-                max_results: 3,
+                max_results: 5,
                 include_raw_content: false
             })
         });
