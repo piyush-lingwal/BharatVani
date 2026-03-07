@@ -165,20 +165,25 @@ export async function getNews() {
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
         const xml = await response.text();
-        // Parse titles from RSS XML
-        const titleMatches = xml.match(/<title><![CDATA[([^\]]+)]]><\/title>/g) ||
-            xml.match(/<title>([^<]+)<\/title>/g) || [];
-        // Skip first (feed title), take next 3 article titles
-        const headlines = titleMatches
-            .slice(1, 4)
-            .map((t, i) => {
-                const text = t.replace(/<title>|<\/title>|<![CDATA[|]]>/g, '').trim();
-                return `${i + 1}. ${text}`;
-            })
-            .join(' | ');
-
-        console.log('News headlines fetched:', headlines.substring(0, 100));
-        return headlines ? `TODAY'S TOP INDIA NEWS: ${headlines}` : '';
+        // Safe string-based title extraction (no regex to avoid syntax errors)
+        const headlines = [];
+        let pos = 0;
+        let skippedFirst = false;
+        while (headlines.length < 3) {
+            const s = xml.indexOf('<title>', pos);
+            if (s === -1) break;
+            const e = xml.indexOf('</title>', s);
+            if (e === -1) break;
+            let title = xml.substring(s + 7, e).trim();
+            // Strip CDATA if present
+            if (title.startsWith('<![CDATA[')) title = title.slice(9, title.lastIndexOf(']]>')).trim();
+            pos = e + 8;
+            if (!skippedFirst) { skippedFirst = true; continue; } // skip feed title
+            if (title.length > 5) headlines.push((headlines.length + 1) + '. ' + title);
+        }
+        const headlineText = headlines.join(' | ');
+        console.log('News headlines fetched:', headlineText.substring(0, 100));
+        return headlineText ? 'TODAY\'S TOP INDIA NEWS: ' + headlineText : '';
     } catch (err) {
         console.error('News RSS error:', err.message);
         return '';
