@@ -186,7 +186,7 @@ export async function callBedrock(userText, conversationHistory = [], language =
 
     const payload = {
         anthropic_version: 'bedrock-2023-05-31',
-        max_tokens: 200,
+        max_tokens: liveData ? 400 : 200,  // More tokens when we have live data to process
         temperature: 0.5,
         system: systemPrompt,
         messages: [
