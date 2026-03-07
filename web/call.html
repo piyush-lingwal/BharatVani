@@ -143,6 +143,7 @@
             font-weight: 700;
             background: linear-gradient(135deg, var(--saffron), var(--accent));
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 4px;
         }
@@ -631,7 +632,9 @@
                     isSpeaking = false;
                     soundWave.classList.remove('active');
                     if (isInCall) {
-                        callStatus.textContent = '🎤 Mic dabaaiye aur boliye...';
+                        // Auto-listen again — like a real phone call
+                        callStatus.textContent = '🎤 Sun rahi hoon... boliye';
+                        setTimeout(() => { if (isInCall) startListening(); }, 500);
                     }
                     resolve();
                 };

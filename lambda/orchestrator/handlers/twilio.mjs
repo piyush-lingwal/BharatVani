@@ -6,14 +6,34 @@
 import { callBedrock } from '../utils/bedrock.mjs';
 import { createSession, getSession, updateSession } from '../utils/session.mjs';
 
-// Hindi speech hints for better recognition
+// Expanded Hindi speech hints — rural vocabulary for better recognition
 const HINDI_HINTS = [
-    'yojana', 'kisan', 'fasal', 'mandi', 'keemat', 'kheti',
-    'PM Kisan', 'Ayushman Bharat', 'Jan Dhan', 'Ujjwala',
-    'gehu', 'chawal', 'tamatar', 'pyaaz', 'aloo', 'dhan',
-    'sarkar', 'paisa', 'labh', 'patra', 'aadhaar',
-    'mudra', 'pension', 'bima', 'awas', 'sukanya',
-    'haan', 'nahi', 'batao', 'kya hai', 'kaise milega'
+    // Schemes
+    'yojana', 'PM Kisan', 'Ayushman Bharat', 'Jan Dhan', 'Ujjwala',
+    'mudra', 'pension', 'bima', 'awas', 'sukanya', 'ration', 'gas',
+    'kisan samman nidhi', 'fasal bima', 'soil health', 'atal pension',
+    // Crops & farming
+    'gehu', 'gehun', 'chawal', 'dhan', 'makka', 'bajra', 'jowar',
+    'sarson', 'chana', 'masoor', 'moong', 'arhar', 'soyabean',
+    'tamatar', 'pyaaz', 'aloo', 'gobhi', 'mirchi', 'lauki', 'bhindi',
+    'fasal', 'kheti', 'kisaan', 'mandi', 'keemat', 'rate', 'bhav',
+    'buwai', 'katai', 'sinchai', 'khet', 'zameen', 'beej', 'khad', 'dawai',
+    // Common rural phrases
+    'paisa', 'paisa kab aayega', 'kist', 'kab milega',
+    'dawa', 'ilaaj', 'hospital', 'doctor', 'beemar',
+    'padhai', 'school', 'baccha', 'bacchi', 'beti',
+    'ghar', 'ghar banwana', 'makaan',
+    'loan', 'karz', 'bank', 'khaata',
+    'aadhaar', 'ration card', 'voter card',
+    // General
+    'namaste', 'namaskar', 'haan', 'nahi', 'batao', 'bataaiye',
+    'kya hai', 'kaise', 'kaise milega', 'kahan', 'kab',
+    'madad', 'help', 'samajh', 'pata nahi',
+    'sarkari', 'sarkar', 'labh', 'fayda',
+    'dhanyavaad', 'shukriya', 'alvida', 'bas', 'theek hai',
+    'accha', 'bilkul', 'zaroor', 'haan ji', 'nahi ji',
+    'mausam', 'barish', 'garmi', 'sardi', 'thand',
+    'chai', 'khana', 'paani', 'bijli', 'sadak'
 ].join(', ');
 
 /**
