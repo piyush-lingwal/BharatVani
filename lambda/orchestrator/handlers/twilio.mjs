@@ -94,6 +94,15 @@ ${content}
 }
 
 /**
+ * Build a <Say> tag with proper language and voice for Twilio
+ * Twilio's language attribute on <Say> tells Polly which phoneme rules to use
+ */
+function sayTag(text, language = 'hi-IN') {
+    const voice = LANGUAGE_VOICES[language] || 'Polly.Aditi';
+    return `<Say language="${language}" voice="${voice}">${escapeXml(text)}</Say>`;
+}
+
+/**
  * Build optimized <Gather> tag with language settings
  */
 function gatherTag(sessionId, prompt, language = 'hi-IN') {
@@ -102,9 +111,10 @@ function gatherTag(sessionId, prompt, language = 'hi-IN') {
     const hintsAttr = language === 'hi-IN' ? `hints="${HINDI_HINTS}" ` : '';
 
     return `<Gather input="speech dtmf" language="${language}" speechTimeout="auto" timeout="8" action="/voice/gather?sessionId=${sessionId}" method="POST" ${hintsAttr}profanityFilter="false" enhanced="true">
-    <Say language="${language}" voice="${voice}">${prompt}</Say>
+    <Say language="${language}" voice="${voice}">${escapeXml(prompt)}</Say>
 </Gather>`;
 }
+
 
 /**
  * Handle incoming call — prompt for language selection
@@ -164,24 +174,28 @@ export async function handleGather(params, sessionId) {
 
     console.log(`Input received: speech="${speechResult}" digits="${digits}" confidence=${confidence} session=${sessionId}`);
 
-    // Handle DTMF fallback
-    if (digits && !speechResult) {
-        const dtmfMap = {
-            '1': 'sarkari yojana ke baare mein batao',
-            '2': 'fasal ki keemat batao',
-            '3': 'kheti ki salah do',
-            '0': 'madad chahiye'
-        };
-        const mappedText = dtmfMap[digits];
-        if (mappedText) {
-            return await processQuery(mappedText, sessionId, phoneNumber);
-        }
-    }
-
+    // Get session FIRST — needed for language in all paths
     const session = await getSession(sessionId);
     const language = session?.language || 'hi-IN';
     const voice = LANGUAGE_VOICES[language] || 'Polly.Aditi';
     const msgs = getMessages();
+
+    // Handle DTMF fallback — language-aware
+    if (digits && !speechResult) {
+        const DTMF_QUERIES = {
+            'hi-IN': { '1': 'sarkari yojana ke baare mein batao', '2': 'fasal ki keemat batao', '3': 'kheti ki salah do', '0': 'madad chahiye' },
+            'en-IN': { '1': 'tell me about government schemes', '2': 'what are crop prices', '3': 'give farming advice', '0': 'I need help' },
+            'ta-IN': { '1': 'arasu thittangal patriya sollunga', '2': 'payir vilai enna', '3': 'vivasaaya alosanai sollunga', '0': 'udavi venum' },
+            'te-IN': { '1': 'sarkar padakamulu gurinchi cheppandi', '2': 'panta dharalu ennto cheppandi', '3': 'vyavasaya salahalu cheppandi', '0': 'sahaayam kaavali' },
+            'bn-IN': { '1': 'sorkari projokti somporke bolun', '2': 'fosholer dam janan', '3': 'krishi poramorsho din', '0': 'sahaajyo chai' },
+            'mr-IN': { '1': 'sarkari yojana baddal sanga', '2': 'pikache bhav sanga', '3': 'shetichi salah dya', '0': 'madad havi' }
+        };
+        const dtmfMap = DTMF_QUERIES[language] || DTMF_QUERIES['hi-IN'];
+        const mappedText = dtmfMap[digits];
+        if (mappedText) {
+            return await processQuery(mappedText, sessionId, phoneNumber, language);
+        }
+    }
 
     // If no speech detected
     if (!speechResult || speechResult.trim() === '') {
@@ -189,7 +203,7 @@ export async function handleGather(params, sessionId) {
         const goodbyeText = msgs.goodbye?.[language] || 'Dhanyavaad!';
         return twiml(`
     ${gatherTag(sessionId, nudgeText, language)}
-    <Say language="${language}" voice="${voice}">${goodbyeText}</Say>
+    ${sayTag(goodbyeText, language)}
 `);
     }
 
@@ -198,7 +212,7 @@ export async function handleGather(params, sessionId) {
     if (endWords.some(w => speechResult.toLowerCase().includes(w))) {
         const goodbyeText = msgs.goodbye?.[language] || 'Dhanyavaad!';
         return twiml(`
-    <Say language="${language}" voice="${voice}">${goodbyeText}</Say>
+    ${sayTag(goodbyeText, language)}
     <Hangup/>
 `);
     }
@@ -224,7 +238,7 @@ async function processQuery(userText, sessionId, phoneNumber, language) {
         if (result.isEndCall) {
             const goodbyeText = msgs.goodbye?.[language] || 'Dhanyavaad!';
             return twiml(`
-    <Say language="${language}" voice="${voice}">${escapeXml(goodbyeText)}</Say>
+    ${sayTag(goodbyeText, language)}
     <Hangup/>
 `);
         }
@@ -233,15 +247,15 @@ async function processQuery(userText, sessionId, phoneNumber, language) {
 
         // Respond using Twilio's built-in Polly TTS
         return twiml(`
-    <Say language="${language}" voice="${voice}">${escapeXml(responseText)}</Say>
+    ${sayTag(responseText, language)}
     ${gatherTag(sessionId, nudgeText, language)}
-    <Say language="${language}" voice="${voice}">${msgs.goodbye?.[language] || 'Dhanyavaad!'}</Say>
+    ${sayTag(msgs.goodbye?.[language] || 'Dhanyavaad!', language)}
 `);
 
     } catch (err) {
         console.error('Error processing query:', err);
         return twiml(`
-    <Say language="${language}" voice="${voice}">Network problem. Please try again.</Say>
+    ${sayTag('Network problem. Please try again.', language)}
     ${gatherTag(sessionId, nudgeText, language)}
 `);
     }

@@ -1,6 +1,8 @@
 /**
  * BharatVani — Government Schemes Handler
  * Handles scheme info, eligibility, and how-to-apply queries
+ * 
+ * v2: Language-aware — uses session.language to pick Hindi vs English response text
  */
 
 import { getSchemeDetails } from '../utils/bedrock.mjs';
@@ -48,57 +50,105 @@ const SCHEME_ALIASES = {
     'mazdoori': 'mgnrega',
     'digital india': 'digital_india',
     'digilocker': 'digital_india',
-    'umang': 'digital_india',
-    'eshram': 'eshram',
-    'e shram': 'eshram',
-    'shram card': 'eshram',
-    'mazdoor card': 'eshram',
-    'ration': 'food_security',
-    'ration card': 'food_security',
-    'food security': 'food_security',
-    'sasta anaj': 'food_security',
-    'jal jeevan': 'jal_jeevan',
-    'har ghar jal': 'jal_jeevan',
-    'paani connection': 'jal_jeevan',
-    'tap water': 'jal_jeevan',
+    'ration': 'national_food_security',
+    'ration card': 'national_food_security',
+    'rashan': 'national_food_security',
+    'food security': 'national_food_security',
+    'gehu chawal': 'national_food_security',
+    'free anaj': 'national_food_security',
     'scholarship': 'national_scholarship',
-    'chhaatravritti': 'national_scholarship',
-    'padhai ka paisa': 'national_scholarship',
-    'jeevan jyoti': 'pm_jeevan_jyoti',
-    'jeevan bima': 'pm_jeevan_jyoti',
-    'life insurance': 'pm_jeevan_jyoti',
-    'matru vandana': 'pm_matru_vandana',
-    'maternity': 'pm_matru_vandana',
-    'garbhvati': 'pm_matru_vandana',
-    'pregnant': 'pm_matru_vandana',
-    'suraksha bima': 'pm_suraksha_bima',
-    'accident insurance': 'pm_suraksha_bima',
-    'durghatna bima': 'pm_suraksha_bima',
+    'padhai': 'national_scholarship',
+    'fees': 'national_scholarship',
+    'chatravritti': 'national_scholarship',
+    'jeevan jyoti': 'jeevan_jyoti_bima',
+    'jeevan bima': 'jeevan_jyoti_bima',
+    'life insurance': 'jeevan_jyoti_bima',
+    'suraksha bima': 'suraksha_bima_yojana',
+    'accident insurance': 'suraksha_bima_yojana',
+    'durghatna bima': 'suraksha_bima_yojana',
     'svanidhi': 'pm_svanidhi',
-    'street vendor': 'pm_svanidhi',
     'thela': 'pm_svanidhi',
+    'street vendor': 'pm_svanidhi',
     'rehri': 'pm_svanidhi',
     'vishwakarma': 'pm_vishwakarma',
     'karigar': 'pm_vishwakarma',
-    'lohar': 'pm_vishwakarma',
-    'badhai': 'pm_vishwakarma',
-    'kumhar': 'pm_vishwakarma',
     'darzi': 'pm_vishwakarma',
+    'lohar': 'pm_vishwakarma',
     'skill india': 'skill_india',
-    'training': 'skill_india',
-    'pmkvy': 'skill_india',
     'kaushal vikas': 'skill_india',
-    'standup india': 'standup_india',
-    'stand up': 'standup_india',
-    'sc st loan': 'standup_india',
-    'mahila udyami': 'standup_india',
+    'training': 'skill_india',
     'startup india': 'startup_india',
     'startup': 'startup_india',
+    'new business': 'startup_india',
     'swachh bharat': 'swachh_bharat',
     'shauchalay': 'swachh_bharat',
     'toilet': 'swachh_bharat',
-    'safai': 'swachh_bharat'
+    'safai': 'swachh_bharat',
+    'stand up india': 'stand_up_india',
+    'sc st loan': 'stand_up_india',
+    'jal jeevan': 'jal_jeevan',
+    'paani': 'jal_jeevan',
+    'nal se jal': 'jal_jeevan',
+    'matru vandana': 'matru_vandana',
+    'pregnancy': 'matru_vandana',
+    'garbhvati': 'matru_vandana'
 };
+
+// Multilingual response templates
+const TEMPLATES = {
+    'hi-IN': {
+        askWhichScheme: 'Kaunsi yojana ke baare mein jaanna chahte hain? Jaise PM-KISAN, Ayushman Bharat, Ujjwala Yojana?',
+        schemeNotFound: (name) => `Maaf kijiye, "${name}" yojana ki jaankari abhi available nahi hai. PM-KISAN, Ayushman Bharat, ya Ujjwala ke baare mein pooch sakte hain.`,
+        eligibilityPrefix: (schemeName) => `${schemeName} ke liye:`,
+        eligibilitySuffix: 'Kya aur details chahiye?',
+        documentsPrefix: (schemeName) => `${schemeName} ke liye ye documents chahiye:`,
+        applyPrefix: (schemeName) => `${schemeName} apply karne ke liye:`
+    },
+    'en-IN': {
+        askWhichScheme: 'Which scheme would you like to know about? For example, PM-KISAN, Ayushman Bharat, or Ujjwala Yojana?',
+        schemeNotFound: (name) => `Sorry, information about "${name}" scheme is not available right now. You can ask about PM-KISAN, Ayushman Bharat, or Ujjwala.`,
+        eligibilityPrefix: (schemeName) => `For ${schemeName}:`,
+        eligibilitySuffix: 'Would you like more details?',
+        documentsPrefix: (schemeName) => `Documents required for ${schemeName}:`,
+        applyPrefix: (schemeName) => `To apply for ${schemeName}:`
+    },
+    'ta-IN': {
+        askWhichScheme: 'Enna thittam pathi therinja kollanumnu ninaikkireenga? Udaaranathukku PM-KISAN, Ayushman Bharat, Ujjwala Yojana?',
+        schemeNotFound: (name) => `Mannikkavum, "${name}" thittam pathi thagaval ippo kidaiyaadhu. PM-KISAN, Ayushman Bharat, Ujjwala pathi kekkalam.`,
+        eligibilityPrefix: (schemeName) => `${schemeName} thaguthigal:`,
+        eligibilitySuffix: 'Innum thagaval veenuma?',
+        documentsPrefix: (schemeName) => `${schemeName}-kku thevaiyana aaavanam:`,
+        applyPrefix: (schemeName) => `${schemeName} apply panna:`
+    },
+    'te-IN': {
+        askWhichScheme: 'Mee evari padakam gurinchi telusukovaalanukuntunaaru? Udaaharanaku PM-KISAN, Ayushman Bharat, Ujjwala Yojana?',
+        schemeNotFound: (name) => `Kshaminchandi, "${name}" padakam gurinchi samacharam ippudu andubatulo ledu. PM-KISAN, Ayushman Bharat, Ujjwala gurinchi adagachu.`,
+        eligibilityPrefix: (schemeName) => `${schemeName} arhata:`,
+        eligibilitySuffix: 'Inka viveramulu kaavala?',
+        documentsPrefix: (schemeName) => `${schemeName} kosam kaavalsina documents:`,
+        applyPrefix: (schemeName) => `${schemeName} apply cheyyadaaniki:`
+    },
+    'bn-IN': {
+        askWhichScheme: 'Aapni kon projokti somporke jante chaichen? Jemon PM-KISAN, Ayushman Bharat, Ujjwala Yojana?',
+        schemeNotFound: (name) => `Dukkhito, "${name}" projokti somporke tothyo ekhon paowa jachhe na. PM-KISAN, Ayushman Bharat, ba Ujjwala somporke jigges korte paren.`,
+        eligibilityPrefix: (schemeName) => `${schemeName}-er yogyota:`,
+        eligibilitySuffix: 'Aro tothyo chai?',
+        documentsPrefix: (schemeName) => `${schemeName}-er jonno dorkari kagojpotro:`,
+        applyPrefix: (schemeName) => `${schemeName} abedon korte:`
+    },
+    'mr-IN': {
+        askWhichScheme: 'Tumhala kontya yojane baddal mahiti havi aahe? Udaaharnaarth PM-KISAN, Ayushman Bharat, Ujjwala Yojana?',
+        schemeNotFound: (name) => `Maaf kara, "${name}" yojane baddal mahiti sadhya uplabdh nahi. PM-KISAN, Ayushman Bharat, kinva Ujjwala baddal vicharu shakta.`,
+        eligibilityPrefix: (schemeName) => `${schemeName} sathi pathrata:`,
+        eligibilitySuffix: 'Aanakhi mahiti havi ka?',
+        documentsPrefix: (schemeName) => `${schemeName} sathi lagnare kagadpatre:`,
+        applyPrefix: (schemeName) => `${schemeName} sathi arj karnyasathi:`
+    }
+};
+
+function getTemplate(language) {
+    return TEMPLATES[language] || TEMPLATES['hi-IN'];
+}
 
 /**
  * Handle a government scheme query
@@ -107,10 +157,12 @@ const SCHEME_ALIASES = {
 export async function handleGovtScheme(intent, entities, session) {
     const schemeName = entities?.scheme_name;
     const queryType = entities?.query_type || 'info';
+    const language = session?.language || 'hi-IN';
+    const t = getTemplate(language);
 
     if (!schemeName) {
         return {
-            response_text: 'Kaunsi yojana ke baare mein jaanna chahte hain? Jaise PM-KISAN, Ayushman Bharat, Ujjwala Yojana?',
+            response_text: t.askWhichScheme,
             sms_content: null,
             next_state: 'listening'
         };
@@ -122,61 +174,81 @@ export async function handleGovtScheme(intent, entities, session) {
 
     if (!scheme) {
         return {
-            response_text: `Maaf kijiye, "${schemeName}" yojana ki jaankari abhi available nahi hai. PM-KISAN, Ayushman Bharat, ya Ujjwala ke baare mein pooch sakte hain.`,
+            response_text: t.schemeNotFound(schemeName),
             sms_content: null,
             next_state: 'listening'
         };
     }
 
-    // Handle different query types
+    // Handle different query types with language awareness
     switch (queryType) {
         case 'eligibility':
-            return handleEligibility(scheme);
+            return handleEligibility(scheme, language, t);
 
         case 'documents':
-            return handleDocuments(scheme);
+            return handleDocuments(scheme, language, t);
 
         case 'how_to_apply':
-            return handleHowToApply(scheme);
+            return handleHowToApply(scheme, language, t);
 
         case 'benefits':
         case 'info':
         default:
-            return handleSchemeInfo(scheme);
+            return handleSchemeInfo(scheme, language, t);
     }
 }
 
-function handleSchemeInfo(scheme) {
+/**
+ * Pick the right text based on language — use Hindi for Hindi, English for all others
+ * (Scheme data only has Hindi + English fields)
+ */
+function pickText(hindiText, englishText, language) {
+    if (language === 'hi-IN') return hindiText || englishText;
+    // For non-Hindi languages, use English text — Claude will translate in the system prompt
+    return englishText || hindiText;
+}
+
+function handleSchemeInfo(scheme, language, t) {
+    const summary = pickText(scheme.hindi_summary, scheme.benefit, language);
+    const helpline = scheme.helpline ? ` Helpline: ${scheme.helpline}` : '';
     return {
-        response_text: scheme.hindi_summary,
+        response_text: `${summary}${helpline}`,
         sms_content: `${scheme.name}: ${scheme.benefit}\nHelpline: ${scheme.helpline}\nWebsite: ${scheme.website}`,
         next_state: 'listening'
     };
 }
 
-function handleEligibility(scheme) {
-    const criteria = scheme.eligibility.description_hindi;
+function handleEligibility(scheme, language, t) {
+    const criteria = pickText(
+        scheme.eligibility?.description_hindi,
+        scheme.eligibility?.description,
+        language
+    );
     return {
-        response_text: `${scheme.name} ke liye: ${criteria}. Kya aur details chahiye?`,
+        response_text: `${t.eligibilityPrefix(scheme.name)} ${criteria}. ${t.eligibilitySuffix}`,
         sms_content: null,
         next_state: 'listening'
     };
 }
 
-function handleDocuments(scheme) {
-    const docs = scheme.documents_required.join(', ');
+function handleDocuments(scheme, language, t) {
+    const docs = scheme.documents_required?.join(', ') || '';
     return {
-        response_text: `${scheme.name} ke liye ye documents chahiye: ${docs}`,
-        sms_content: `${scheme.name} - Required Documents:\n${scheme.documents_required.map((d, i) => `${i + 1}. ${d}`).join('\n')}`,
+        response_text: `${t.documentsPrefix(scheme.name)} ${docs}`,
+        sms_content: `${scheme.name} - Required Documents:\n${scheme.documents_required?.map((d, i) => `${i + 1}. ${d}`).join('\n')}`,
         next_state: 'listening'
     };
 }
 
-function handleHowToApply(scheme) {
-    const steps = scheme.how_to_apply.steps_hindi.slice(0, 3).join('. ');
+function handleHowToApply(scheme, language, t) {
+    const steps = pickText(
+        scheme.how_to_apply?.steps_hindi?.slice(0, 3).join('. '),
+        scheme.how_to_apply?.steps?.slice(0, 3).join('. '),
+        language
+    );
     return {
-        response_text: `${scheme.name} apply karne ke liye: ${steps}`,
-        sms_content: `${scheme.name} - How to Apply:\n${scheme.how_to_apply.steps.map((s, i) => `${i + 1}. ${s}`).join('\n')}\nHelpline: ${scheme.helpline}`,
+        response_text: `${t.applyPrefix(scheme.name)} ${steps}`,
+        sms_content: `${scheme.name} - How to Apply:\n${scheme.how_to_apply?.steps?.map((s, i) => `${i + 1}. ${s}`).join('\n')}\nHelpline: ${scheme.helpline}`,
         next_state: 'listening'
     };
 }

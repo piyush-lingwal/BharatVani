@@ -36,7 +36,7 @@ Parameters:
     AllowedValues: [dev, prod]
   BedrockModelId:
     Type: String
-    Default: apac.anthropic.claude-3-5-sonnet-20241022-v2:0
+    Default: apac.anthropic.claude-3-5-haiku-20241022-v1:0
   WeatherApiKey:
     Type: String
     Default: ''

@@ -1,6 +1,8 @@
 /**
  * BharatVani — Farmer Assistant Handler
  * Handles crop prices, weather, and farming tips
+ *
+ * v2: Language-aware — uses session.language to pick response text
  */
 
 import { readFileSync } from 'fs';
@@ -13,25 +15,35 @@ let cachedTips = null;
 
 function loadMandiPrices() {
     if (cachedPrices) return cachedPrices;
-    try {
-        const __dirname = dirname(fileURLToPath(import.meta.url));
-        const path = join(__dirname, '..', '..', '..', 'knowledge-base', 'agriculture', 'mandi_prices.json');
-        cachedPrices = JSON.parse(readFileSync(path, 'utf-8'));
-    } catch (err) {
-        cachedPrices = { prices: [] };
+    const __dirname = dirname(fileURLToPath(import.meta.url));
+    const searchPaths = [
+        join(__dirname, '..', '..', '..', 'knowledge-base', 'agriculture', 'mandi_prices.json'),
+        join('/var/task', 'knowledge-base', 'agriculture', 'mandi_prices.json')
+    ];
+    for (const path of searchPaths) {
+        try {
+            cachedPrices = JSON.parse(readFileSync(path, 'utf-8'));
+            return cachedPrices;
+        } catch (e) { continue; }
     }
+    cachedPrices = { prices: [] };
     return cachedPrices;
 }
 
 function loadFarmingTips() {
     if (cachedTips) return cachedTips;
-    try {
-        const __dirname = dirname(fileURLToPath(import.meta.url));
-        const path = join(__dirname, '..', '..', '..', 'knowledge-base', 'agriculture', 'farming_tips.json');
-        cachedTips = JSON.parse(readFileSync(path, 'utf-8'));
-    } catch (err) {
-        cachedTips = { seasonal_tips: {}, general_tips: [] };
+    const __dirname = dirname(fileURLToPath(import.meta.url));
+    const searchPaths = [
+        join(__dirname, '..', '..', '..', 'knowledge-base', 'agriculture', 'farming_tips.json'),
+        join('/var/task', 'knowledge-base', 'agriculture', 'farming_tips.json')
+    ];
+    for (const path of searchPaths) {
+        try {
+            cachedTips = JSON.parse(readFileSync(path, 'utf-8'));
+            return cachedTips;
+        } catch (e) { continue; }
     }
+    cachedTips = { seasonal_tips: {}, general_tips: [] };
     return cachedTips;
 }
 
@@ -49,32 +61,91 @@ const CROP_ALIASES = {
     'patta gobhi': 'Cabbage', 'bandh gobhi': 'Cabbage', 'cabbage': 'Cabbage'
 };
 
+// Multilingual response templates for farmer queries
+const TEMPLATES = {
+    'hi-IN': {
+        askWhichCrop: 'Kis fasal ka bhav jaanna chahte hain? Jaise tamatar, pyaz, aloo, gehun, chawal?',
+        cropNotFound: (name) => `Maaf kijiye, "${name}" ka bhav abhi available nahi hai. Tamatar, pyaz, aloo, gehun ka bhav pooch sakte hain.`,
+        priceInCity: (crop, city, price) => `${crop} ka bhav ${city} mein ₹${price} per kilo hai.`,
+        priceAll: (crop, priceList, bestCity) => `Aaj ${crop} ka bhav: ${priceList}. Sabse accha rate ${bestCity} mein hai.`,
+        weatherFallback: (city) => `${city} ke mausam ki jaankari live data se mil rahi hai. Kuch aur poochna hai?`,
+        farmingFallback: 'Har 2 saal mein mitti ki jaanch karwaayein. Soil Health Card scheme mein free hoti hai.'
+    },
+    'en-IN': {
+        askWhichCrop: 'Which crop\'s price would you like to know? For example, tomato, onion, potato, wheat, rice?',
+        cropNotFound: (name) => `Sorry, the price of "${name}" is not available right now. You can ask about tomato, onion, potato, or wheat prices.`,
+        priceInCity: (crop, city, price) => `${crop} is priced at ₹${price} per kg in ${city}.`,
+        priceAll: (crop, priceList, bestCity) => `Today's ${crop} prices: ${priceList}. Best rate is in ${bestCity}.`,
+        weatherFallback: (city) => `Weather information for ${city} is being fetched from live data. Anything else you'd like to know?`,
+        farmingFallback: 'Get your soil tested every 2 years. It\'s free under the Soil Health Card scheme.'
+    },
+    'ta-IN': {
+        askWhichCrop: 'Enna payirin vilai therinja venum? Udaaranathukku thakkali, vengaayam, urulaikizhangu?',
+        cropNotFound: (name) => `Mannikkavum, "${name}" vilai ippo kidaiyaadhu. Thakkali, vengaayam, urulaikizhangu vilai kekkalam.`,
+        priceInCity: (crop, city, price) => `${crop} vilai ${city}-la ₹${price} per kg.`,
+        priceAll: (crop, priceList, bestCity) => `Innaiku ${crop} vilai: ${priceList}. Sirantha vilai ${bestCity}-la irukku.`,
+        weatherFallback: (city) => `${city} vaanilai thagaval live data-lirundu varugiradhu. Vera enna venum?`,
+        farmingFallback: 'Mannai 2 varudathukku oru murai parisodhanai seyyungal. Soil Health Card thittathil ilavasamaaga kidaikkum.'
+    },
+    'te-IN': {
+        askWhichCrop: 'Ee panta dhara telusukovaalanukuntunaaru? Udaaharanaku tomato, ulli, aalugadda, godumalu?',
+        cropNotFound: (name) => `Kshaminchandi, "${name}" dhara ippudu andubatulo ledu. Tomato, ulli, aalugadda dhara adagachu.`,
+        priceInCity: (crop, city, price) => `${crop} dhara ${city}-lo ₹${price} per kg.`,
+        priceAll: (crop, priceList, bestCity) => `Ee roju ${crop} dharalu: ${priceList}. Manchhi dhara ${bestCity}-lo undi.`,
+        weatherFallback: (city) => `${city} vaataavarana samacharam live data nundi vastondi. Inka em kaavali?`,
+        farmingFallback: 'Prati 2 sanvatsaraalaku oka saari matti pariksha cheyinchandi. Soil Health Card padakamlo idi free.'
+    },
+    'bn-IN': {
+        askWhichCrop: 'Kon fosholer dam jante chaichen? Jemon tomato, peyaj, aloo, gom, chaal?',
+        cropNotFound: (name) => `Dukkhito, "${name}"-er dam ekhon paowa jachhe na. Tomato, peyaj, aloo, gom-er dam jigges korte paren.`,
+        priceInCity: (crop, city, price) => `${crop}-er dam ${city}-te ₹${price} proti kg.`,
+        priceAll: (crop, priceList, bestCity) => `Aajker ${crop}-er dam: ${priceList}. Sorbottromo dam ${bestCity}-te.`,
+        weatherFallback: (city) => `${city}-r abohaowa tothyo live data theke ashche. Aar kichu jante chaichen?`,
+        farmingFallback: 'Protidin 2 bochor por por maati poriksha korun. Soil Health Card scheme-e ei ta free.'
+    },
+    'mr-IN': {
+        askWhichCrop: 'Kontya pikache bhav janun ghyayche aahe? Udaaharnaarth tamatar, kanda, batata, gahu?',
+        cropNotFound: (name) => `Maaf kara, "${name}"-cha bhav sadhya uplabdh nahi. Tamatar, kanda, batata, gahu baddal vicharu shakta.`,
+        priceInCity: (crop, city, price) => `${crop}-cha bhav ${city} madhe ₹${price} pratikg aahe.`,
+        priceAll: (crop, priceList, bestCity) => `Aajcha ${crop} bhav: ${priceList}. Sarvottam dar ${bestCity} madhe aahe.`,
+        weatherFallback: (city) => `${city}-cha havaman mahiti live data madhun yetoy. Aaankhi kaahi hava ka?`,
+        farmingFallback: 'Dari 2 varshaanni mati tapasni kara. Soil Health Card yojane madhe he muft aahe.'
+    }
+};
+
+function getTemplate(language) {
+    return TEMPLATES[language] || TEMPLATES['hi-IN'];
+}
+
 /**
  * Handle farmer assistant queries
  */
 export async function handleFarmerQuery(intent, entities, session) {
+    const language = session?.language || 'hi-IN';
+
     switch (intent) {
         case 'crop_price':
-            return handleCropPrice(entities);
+            return handleCropPrice(entities, language);
         case 'weather_forecast':
-            return handleWeather(entities);
+            return handleWeather(entities, language);
         case 'farming_advice':
-            return handleFarmingAdvice(entities);
+            return handleFarmingAdvice(entities, language);
         default:
-            return handleCropPrice(entities); // default to crop prices
+            return handleCropPrice(entities, language); // default to crop prices
     }
 }
 
 /**
  * Handle crop price queries
  */
-function handleCropPrice(entities) {
+function handleCropPrice(entities, language) {
     const cropName = entities?.crop_name;
     const city = entities?.city;
+    const t = getTemplate(language);
 
     if (!cropName) {
         return {
-            response_text: 'Kis fasal ka bhav jaanna chahte hain? Jaise tamatar, pyaz, aloo, gehun, chawal?',
+            response_text: t.askWhichCrop,
             sms_content: null,
             next_state: 'listening'
         };
@@ -90,11 +161,14 @@ function handleCropPrice(entities) {
 
     if (!cropData) {
         return {
-            response_text: `Maaf kijiye, "${cropName}" ka bhav abhi available nahi hai. Tamatar, pyaz, aloo, gehun ka bhav pooch sakte hain.`,
+            response_text: t.cropNotFound(cropName),
             sms_content: null,
             next_state: 'listening'
         };
     }
+
+    // Use Hindi name for Hindi, English name for others
+    const displayCrop = language === 'hi-IN' ? (cropData.crop_hindi || cropData.crop) : cropData.crop;
 
     // If city specified, filter for that city
     if (city) {
@@ -104,7 +178,7 @@ function handleCropPrice(entities) {
 
         if (cityData) {
             return {
-                response_text: `${cropData.crop_hindi} ka bhav ${cityData.city} mein ₹${cityData.price_per_kg} per kilo hai.`,
+                response_text: t.priceInCity(displayCrop, cityData.city, cityData.price_per_kg),
                 sms_content: null,
                 next_state: 'listening'
             };
@@ -122,23 +196,23 @@ function handleCropPrice(entities) {
     );
 
     return {
-        response_text: `Aaj ${cropData.crop_hindi} ka bhav: ${priceList}. Sabse accha rate ${bestMarket.city} mein hai.`,
-        sms_content: `${cropData.crop} (${cropData.crop_hindi}) - Aaj ke Mandi Bhav:\n${cropData.markets.map(m => `${m.city} ${m.market}: ₹${m.price_per_kg}/kg`).join('\n')}`,
+        response_text: t.priceAll(displayCrop, priceList, bestMarket.city),
+        sms_content: `${cropData.crop} (${cropData.crop_hindi}) - Market Prices:\n${cropData.markets.map(m => `${m.city} ${m.market}: ₹${m.price_per_kg}/kg`).join('\n')}`,
         next_state: 'listening'
     };
 }
 
 /**
- * Handle weather queries (mock for hackathon)
+ * Handle weather queries
+ * Real weather is fetched by apiServices.mjs and injected into Claude's context.
+ * This handler returns a fallback only if the live pipeline missed it.
  */
-function handleWeather(entities) {
+function handleWeather(entities, language) {
     const city = entities?.city || 'Delhi';
+    const t = getTemplate(language);
 
-    // Real weather data is fetched by apiServices.mjs detectLiveDataNeed() and injected
-    // into Claude's context BEFORE this handler runs. Claude's response already contains
-    // accurate live weather. This handler returns a fallback only if the live pipeline missed it.
     return {
-        response_text: `${city} ke mausam ki jaankari live data se mil rahi hai. Kuch aur poochna hai?`,
+        response_text: t.weatherFallback(city),
         sms_content: null,
         next_state: 'listening'
     };
@@ -147,9 +221,10 @@ function handleWeather(entities) {
 /**
  * Handle farming advice queries
  */
-function handleFarmingAdvice(entities) {
+function handleFarmingAdvice(entities, language) {
     const tips = loadFarmingTips();
     const crop = entities?.crop_name;
+    const t = getTemplate(language);
 
     // Determine current season
     const month = new Date().getMonth() + 1;
@@ -175,8 +250,12 @@ function handleFarmingAdvice(entities) {
     }
 
     if (relevantTip) {
+        // Use Hindi tip for Hindi, English tip for other languages
+        const tipText = (language === 'hi-IN')
+            ? (relevantTip.tip || relevantTip.tip_hindi)
+            : (relevantTip.tip_english || relevantTip.tip);
         return {
-            response_text: relevantTip.tip,
+            response_text: tipText,
             sms_content: null,
             next_state: 'listening'
         };
@@ -184,8 +263,19 @@ function handleFarmingAdvice(entities) {
 
     // Fallback to general tip
     const generalTip = generalTips[Math.floor(Math.random() * generalTips.length)];
+    if (generalTip) {
+        const tipText = (language === 'hi-IN')
+            ? (generalTip.tip_hindi || generalTip.tip)
+            : (generalTip.tip || generalTip.tip_hindi);
+        return {
+            response_text: tipText,
+            sms_content: null,
+            next_state: 'listening'
+        };
+    }
+
     return {
-        response_text: generalTip?.tip_hindi || 'Har 2 saal mein mitti ki jaanch karwaayein. Soil Health Card scheme mein free hoti hai.',
+        response_text: t.farmingFallback,
         sms_content: null,
         next_state: 'listening'
     };

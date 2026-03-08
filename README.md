@@ -19,7 +19,7 @@
 
 ---
 
-[![AWS Bedrock](https://img.shields.io/badge/Amazon%20Bedrock-Claude%203.5%20Sonnet-FF9900?style=for-the-badge&logo=amazon-aws&logoColor=white)](https://aws.amazon.com/bedrock/)
+[![AWS Bedrock](https://img.shields.io/badge/Amazon%20Bedrock-Claude%203.5%20Haiku-FF9900?style=for-the-badge&logo=amazon-aws&logoColor=white)](https://aws.amazon.com/bedrock/)
 [![Lambda](https://img.shields.io/badge/AWS%20Lambda-Serverless-FF9900?style=for-the-badge&logo=aws-lambda&logoColor=white)](https://aws.amazon.com/lambda/)
 [![DynamoDB](https://img.shields.io/badge/DynamoDB-Cache%20%2B%20Sessions-4053D6?style=for-the-badge&logo=amazon-dynamodb&logoColor=white)](https://aws.amazon.com/dynamodb/)
 [![X-Ray](https://img.shields.io/badge/AWS%20X--Ray-Tracing%20Active-E7157B?style=for-the-badge&logo=amazon-aws&logoColor=white)](https://aws.amazon.com/xray/)
@@ -69,7 +69,7 @@ Try the **live interactive demo** — talk to BharatVani directly from your brow
 | **Text Input** | ❌ | ✅ Type questions |
 | **AI Response** | Spoken over call (Twilio TTS) | Spoken + displayed (Browser TTS) |
 | **Works on** | Any phone (2G/3G/4G/5G) | Any modern browser |
-| **Languages** | Hindi | Hindi + English |
+| **Languages** | Hindi, English, Tamil, Telugu, Bengali, Marathi | All 6 languages |
 
 ---
 
@@ -122,7 +122,11 @@ BharatVani is the **last-mile layer** that connects India's most excluded citize
 | 💼 **Jobs / Naukri** | "Sarkari naukri ki vacancy kab nikalti hai?" | Tavily AI Web Search | ✅ Live |
 | 🌾 **Agriculture / Mandi** | "Gehun ka aaj ka rate kya hai?" | Tavily AI Web Search | ✅ Live |
 | 💊 **Health Schemes** | "Ayushman Bharat mein kya kya hota hai?" | Local Knowledge Base | ✅ Live |
-| 💬 **Anything Else** | Any question, in any phrasing | Claude 3.5 Sonnet AI | ✅ Live |
+| 🏏 **Live Sports / Cricket** | "IND vs NZ match ka score?" | Smart Hybrid Search (Tavily) | ✅ Live |
+| 📝 **Exam Results** | "UPSC result kab aayega?" | Smart Hybrid Search (Tavily) | ✅ Live |
+| 🎬 **Entertainment** | "Latest Bollywood movie kaun si hai?" | Smart Hybrid Search (Tavily) | ✅ Live |
+| 🗳️ **Elections / Politics** | "UP chunav ka kya update hai?" | Smart Hybrid Search (Tavily) | ✅ Live |
+| 💬 **Anything Else** | Any question, in any phrasing | Claude 3.5 Haiku AI | ✅ Live |
 
 ---
 
@@ -145,8 +149,7 @@ BharatVani is the **last-mile layer** that connects India's most excluded citize
        │ 🗣️ User speaks            │         ┌────────┐  ┌──────┐ ┌───┐ │
        │ 🔊 AI responds            │         │Bedrock │  │  S3  │ │DDB│ │
                                     │         │Claude  │  │ KB   │ │   │ │
-                                    │         │3.5 APAC│  │25+   │ │4  │ │
-                                    │         └────────┘  │schms │ │tbl│ │
+                                    │         │3.5     │  │25+   │ │4  │ │
                                     │              │       └──────┘ └───┘ │
                                     │    ┌─────────┴──────────┐          │
                                     │    │   Live Data Layer  │          │
@@ -191,9 +194,17 @@ sequenceDiagram
 
     LM->>BR: Claude prompt + LIVE DATA injected
     Note over BR: withRetry() — 3 attempts<br/>1s/2s/4s backoff on throttle
-    BR-->>LM: Natural Hindi response
-    LM->>TW: TwiML <Say> — speak response
-    TW->>U: 🔊 AI voice response in Hindi
+    BR-->>LM: Response (may include [SEARCH_NEEDED] tag)
+
+    alt Claude needs real-time data
+        LM->>API: Smart Search — Tavily fetch with Claude's optimized query
+        API-->>LM: Search results
+        LM->>BR: Second call — user text + search results as LIVE DATA
+        BR-->>LM: Final response with real-time data
+    end
+
+    LM->>TW: TwiML <Say> with SSML — speak response
+    TW->>U: 🔊 AI voice response in user's selected language
 ```
 
 ---
@@ -202,7 +213,7 @@ sequenceDiagram
 
 | AWS Service | How BharatVani Uses It | Why This Service |
 |---|---|---|
-| 🧠 **Amazon Bedrock** | Powers all AI understanding and response generation using Claude 3.5 Sonnet (APAC cross-region inference profile) | Managed AI, no GPU infra, highest quality multilingual model available |
+| 🧠 **Amazon Bedrock** | Powers all AI understanding and response generation using Claude 3.5 Haiku (APAC cross-region inference profile). Smart Hybrid Search uses a two-call pattern when real-time data is needed. | Managed AI, no GPU infra, 3x faster than Sonnet, 5x cheaper |
 | ⚡ **AWS Lambda** | Single orchestrator function — handles all call routing, live data fetching, prompt building, and TwiML generation | Serverless: zero servers, infinite scale, pay-per-invocation |
 | 🔌 **Amazon API Gateway** | HTTP API exposing `/voice/incoming`, `/voice/gather`, `/chat` with 200 burst / 100 rps throttling | Auto-scaling, built-in throttle, protects Bedrock quota from abuse |
 | 💾 **Amazon DynamoDB** | 4 tables: `Sessions` (call history), `Users` (profiles), `QueryLogs` (analytics), `Cache` (API response cache with TTL) | Single-digit ms latency, serverless, TTL auto-cleanup |
@@ -299,13 +310,26 @@ graph LR
     D -->|"mausam / weather"| W["🌦️ OpenWeatherMap\n50+ Indian cities\n5s timeout"]
     D -->|"khabar / news"| N["📰 NDTV India RSS\nFree • No auth\nTop 3 headlines"]
     D -->|"petrol / sona / train\nnaukri / scheme..."| T["🔍 Tavily AI Search\nadvanced depth\nDate-aware query"]
+    D -->|"no keyword match"| B["🧠 Claude 3.5 Haiku"]
+    B -->|"[SEARCH_NEEDED:query]"| T2["🔍 Smart Hybrid Search\nClaude's optimized query\n5 min cache"]
     W --> C["💾 DynamoDB Cache\n30 min TTL"]
     N --> C2["💾 DynamoDB Cache\n60 min TTL"]
-    T --> C3["💾 DynamoDB Cache\n15-60 min TTL"]
-    C --> P["🧠 Claude 3.5 Sonnet\nLIVE DATA injected\nResponds in Hindi"]
+    T --> C3["💾 DynamoDB Cache\n5-30 min TTL"]
+    T2 --> C4["💾 DynamoDB Cache\n5 min TTL"]
+    C --> P["🧠 Claude 3.5 Haiku\nLIVE DATA injected\nResponds in user's language"]
     C2 --> P
     C3 --> P
+    C4 --> P2["🧠 Second Bedrock call\nwith search results"]
 ```
+
+### 🔍 Smart Hybrid Search (AI-Driven)
+
+Instead of relying solely on keyword matching for real-time queries, BharatVani uses a **Smart Hybrid** approach:
+
+1. **First Pass — Keywords** (zero latency): Weather, gold, and news keywords are detected pre-emptively and fetched in parallel with Bedrock
+2. **Second Pass — Claude decides** (only when needed): If Claude can't answer from its knowledge, it outputs `[SEARCH_NEEDED:optimized query]` → Pipeline fetches Tavily → Makes a second Bedrock call with results
+
+This means **any question** can trigger a real-time search — cricket scores, exam results, breaking news — without maintaining an infinite keyword list.
 
 **Query augmentation:** Every Tavily search automatically appends `India` + today's date to maximize relevance of results.
 
@@ -315,12 +339,12 @@ graph LR
 
 ## 🗣️ Language & Voice
 
-| | Today | Roadmap Phase 2 |
+| | Today | Notes |
 |---|---|---|
-| **Input (STT)** | Hindi `hi-IN` (Devanagari), English | Tamil, Telugu, Bengali, Marathi |
-| **Processing** | Claude 3.5 Sonnet — native multilingual | Same — Claude handles all |
-| **Output (TTS)** | Twilio `hi-IN` neural voice | Amazon Polly + Connect integration |
-| **Code-mixing** | ✅ Supported — "Mujhe train *book* karna hai" | ✅ Always |
+| **Input (STT)** | Hindi, English, Tamil, Telugu, Bengali, Marathi | Twilio speech recognition with per-language hints |
+| **Processing** | Claude 3.5 Haiku — native multilingual | Language enforced at system prompt level (3 enforcement points) |
+| **Output (TTS)** | SSML-wrapped with `<lang xml:lang>` tags | Polly.Aditi (Hindi), Polly.Raveena (English) |
+| **Code-mixing** | ✅ Supported — responds in dominant language | System prompt detects code-switching |
 
 ---
 
@@ -396,7 +420,7 @@ sam deploy \
   --no-confirm-changeset \
   --parameter-overrides \
     "Environment=dev \
-     BedrockModelId=apac.anthropic.claude-3-5-sonnet-20241022-v2:0 \
+     BedrockModelId=apac.anthropic.claude-3-5-haiku-20241022-v1:0 \
      WeatherApiKey=YOUR_OPENWEATHER_KEY \
      TavilyApiKey=YOUR_TAVILY_KEY"
 ```
@@ -439,11 +463,12 @@ Method: HTTP POST
 |---|---|---|
 | **Phase 1 — MVP** | ✅ Complete | AI voice call + Hindi + Govt Schemes + Weather/News + Tavily |
 | **Phase 2 — Production Infra** | ✅ Complete | DynamoDB Cache + X-Ray + CloudWatch + SQS DLQ + API Throttling |
-| **Phase 3 — Concurrency** | 📋 Ready (pending quota) | Provisioned Concurrency (no cold starts) + Reserved Concurrency |
-| **Phase 4 — Languages** | 📋 Planned | Tamil, Telugu, Bengali, Marathi STT+TTS |
-| **Phase 5 — Bedrock KB** | 📋 Planned | Migrate to Amazon Bedrock Knowledge Base + RAG |
-| **Phase 6 — Connect** | 📋 Planned | Amazon Connect + Transcribe + Polly (full AWS voice stack) |
-| **Phase 7 — Scale** | 📋 Planned | 3 states pilot, government partnership, 1 lakh+ users |
+| **Phase 3 — Intelligence** | ✅ Complete | Multi-turn memory, user profiles, parallelized pipeline, 10-turn history |
+| **Phase 4 — Multilingual** | ✅ Complete | 6 languages (Hindi, English, Tamil, Telugu, Bengali, Marathi), SSML TTS |
+| **Phase 5 — Smart Search** | ✅ Complete | AI-driven real-time search (Claude decides when to search), Haiku model |
+| **Phase 6 — Concurrency** | 📋 Ready (pending quota) | Provisioned Concurrency (no cold starts) + Reserved Concurrency |
+| **Phase 7 — Bedrock KB** | 📋 Planned | Migrate to Amazon Bedrock Knowledge Base + RAG |
+| **Phase 8 — Connect** | 📋 Planned | Amazon Connect + Transcribe + Polly (full AWS voice stack) |
 
 ---
 

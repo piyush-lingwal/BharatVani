@@ -246,15 +246,15 @@ assert(!sessionCode.includes('const session = await getSession(sessionId);\n  if
 // ==========================================
 // TEST 6: Query Logging (Phase 3)
 // ==========================================
-console.log('\n🧪 TEST 6: Query Logging (index.mjs)\n');
+console.log('\n🧪 TEST 6: Query Logging (pipeline.mjs)\n');
 
-const indexPath = join(projectDir, 'lambda', 'orchestrator', 'index.mjs');
+const indexPath = join(projectDir, 'lambda', 'orchestrator', 'utils', 'pipeline.mjs');
 const indexCode = readFileSync(indexPath, 'utf-8');
 
 assert(indexCode.includes('async function logQuery'), 'logQuery function exists');
 assert(indexCode.includes('QUERY_LOGS_TABLE'), 'QUERY_LOGS_TABLE reference exists');
 assert(indexCode.includes('responseTimeMs'), 'Response time tracking exists');
-assert(indexCode.includes("logQuery(session.session_id"), 'logQuery is called in handleUserInput');
+assert(indexCode.includes("logQuery(session.session_id"), 'logQuery is called in processUserQuery');
 
 // ==========================================
 // TEST 7: Mock Weather Removed (Phase 3)
@@ -332,8 +332,9 @@ assert(apiCode.includes('thangam'), 'Tamil gold keyword (thangam) present');
 assert(apiCode.includes('bangaram'), 'Telugu gold keyword (bangaram) present');
 
 // 8f: Index.mjs language route
-assert(indexCode.includes('/voice/language'), 'index.mjs routes /voice/language');
-assert(indexCode.includes('handleLanguage'), 'index.mjs imports handleLanguage');
+const indexCode8f = readFileSync(join(projectDir, 'lambda', 'orchestrator', 'index.mjs'), 'utf-8');
+assert(indexCode8f.includes('/voice/language'), 'index.mjs routes /voice/language');
+assert(indexCode8f.includes('handleLanguage'), 'index.mjs imports handleLanguage');
 
 // ==========================================
 // TEST 9: Scheme handler compatibility with expanded JSONs

@@ -4,9 +4,11 @@
  *
  * This module exists to break the circular import between index.mjs ↔ twilio.mjs
  * All query processing (Bedrock + intent routing + handlers + live data) lives here.
+ *
+ * v2: Parallelized operations, user memory, single live-data orchestration point
  */
 
-import { createSession, getSession, updateSession, addToHistory } from './session.mjs';
+import { createSession, getSession, updateSession, addToHistory, getUser, upsertUser } from './session.mjs';
 import { callBedrock } from './bedrock.mjs';
 import { detectLiveDataNeed, getWeather, getNews, getGoldPrice, searchWeb } from './apiServices.mjs';
 import { handleGovtScheme } from '../handlers/govtSchemes.mjs';
@@ -59,8 +61,100 @@ function getModuleFromIntent(intent) {
 }
 
 /**
+ * Fetch live data if the user's message needs it
+ * Returns the live data string, or empty string if none needed
+ */
+async function fetchLiveDataIfNeeded(userText) {
+    try {
+        const needs = detectLiveDataNeed(userText);
+        if (needs.length === 0) return '';
+
+        const liveResults = await Promise.allSettled(
+            needs.map(async (need) => {
+                switch (need.type) {
+                    case 'weather': return await getWeather(need.city);
+                    case 'news': return await getNews();
+                    case 'gold': return await getGoldPrice();
+                    case 'web_search': return await searchWeb(need.query);
+                    default: return '';
+                }
+            })
+        );
+        return liveResults
+            .filter(r => r.status === 'fulfilled' && r.value)
+            .map(r => r.value)
+            .join('\n');
+    } catch (err) {
+        console.warn('Live data fetch error (non-fatal):', err.message);
+        return '';
+    }
+}
+
+/**
+ * Build user context string for returning callers
+ * @param {string} phoneNumber - caller's phone number
+ * @returns {string} context string or empty
+ */
+async function buildUserContext(phoneNumber) {
+    if (!phoneNumber || phoneNumber === 'web-user' || phoneNumber === '+910000000000') {
+        return '';
+    }
+    try {
+        const user = await getUser(phoneNumber);
+        if (!user || !user.total_calls || user.total_calls < 1) return '';
+
+        const parts = [`[RETURNING USER: Called ${user.total_calls} time(s) before.`];
+        if (user.language_preference) parts.push(`Preferred language: ${user.language_preference}.`);
+        if (user.last_topics && user.last_topics.length > 0) {
+            parts.push(`Previously asked about: ${user.last_topics.slice(0, 3).join(', ')}.`);
+        }
+        if (user.name) parts.push(`Name: ${user.name}.`);
+        parts.push('Greet them warmly as a returning caller.]');
+        return parts.join(' ');
+    } catch (err) {
+        console.warn('User context fetch error (non-fatal):', err.message);
+        return '';
+    }
+}
+
+/**
+ * Update user profile after processing a query (fire-and-forget)
+ */
+async function updateUserProfile(phoneNumber, intent, language) {
+    if (!phoneNumber || phoneNumber === 'web-user' || phoneNumber === '+910000000000') return;
+    try {
+        const user = await getUser(phoneNumber);
+        const totalCalls = (user?.total_calls || 0) + (user ? 0 : 1); // increment only on first query of session
+        const lastTopics = user?.last_topics || [];
+
+        // Add current intent to topics (keep last 5, no duplicates)
+        const intentLabel = getModuleFromIntent(intent);
+        if (intentLabel !== 'general' && intentLabel !== 'system') {
+            if (!lastTopics.includes(intentLabel)) {
+                lastTopics.unshift(intentLabel);
+            }
+        }
+
+        await upsertUser(phoneNumber, {
+            total_calls: totalCalls || 1,
+            last_topics: lastTopics.slice(0, 5),
+            language_preference: language,
+            last_call_at: new Date().toISOString()
+        });
+    } catch (err) {
+        console.warn('User profile update error (non-fatal):', err.message);
+    }
+}
+
+/**
  * SHARED CORE PIPELINE — Used by Twilio voice, web chat, AND Connect
  * Handles: Live data fetch → Bedrock call → Intent routing → Handlers → History → Logging
+ *
+ * v2 improvements:
+ *   - Single point for live data fetching (no duplication with bedrock.mjs)
+ *   - Parallelized: history write + live data fetch run concurrently
+ *   - Post-response ops (logging, history, session update) run in parallel
+ *   - User memory: returning callers get personalized context
  *
  * @param {string} userText   — the user's spoken/typed text
  * @param {string} sessionId  — DynamoDB session ID (can be null → new session created)
@@ -78,44 +172,54 @@ export async function processUserQuery(userText, sessionId, phoneNumber) {
 
     const language = session.language || 'hi-IN';
 
-    // Add user's message to history
-    await addToHistory(session.session_id, 'user', userText);
+    // ─── PARALLEL PHASE 1: Add user message to history + fetch live data + get user context ───
+    const [, liveContext, userContext] = await Promise.all([
+        addToHistory(session.session_id, 'user', userText),
+        fetchLiveDataIfNeeded(userText),
+        buildUserContext(phoneNumber)
+    ]);
 
-    // ─── Fetch live data if needed (weather, news, gold, web search) ───
-    let liveContext = '';
-    let liveDataUsed = false;
-    try {
-        const needs = detectLiveDataNeed(userText);
-        if (needs.length > 0) {
-            liveDataUsed = true;
-            const liveResults = await Promise.allSettled(
-                needs.map(async (need) => {
-                    switch (need.type) {
-                        case 'weather': return await getWeather(need.city);
-                        case 'news': return await getNews();
-                        case 'gold': return await getGoldPrice();
-                        case 'web_search': return await searchWeb(need.query);
-                        default: return '';
-                    }
-                })
-            );
-            liveContext = liveResults
-                .filter(r => r.status === 'fulfilled' && r.value)
-                .map(r => r.value)
-                .join('\n');
-        }
-    } catch (err) {
-        console.warn('Live data fetch error (non-fatal):', err.message);
-    }
+    const liveDataUsed = liveContext.length > 0;
 
     // ─── Call Bedrock — SINGLE CALL for intent detection + response ───
+    // Live data and user context are passed IN (not re-fetched by bedrock.mjs)
     const history = session.conversation_history || [];
     const startTime = Date.now();
-    const aiResponse = await callBedrock(
+    let aiResponse = await callBedrock(
         liveContext ? `${userText}\n\n[LIVE DATA]:\n${liveContext}` : userText,
         history,
-        language
+        language,
+        liveContext,   // passed to bedrock for prompt building
+        userContext     // returning user context
     );
+
+    // ─── SMART HYBRID SEARCH: If Claude says it needs real-time data ───
+    // Claude outputs [SEARCH_NEEDED:query] when it can't answer from its knowledge
+    // We fetch Tavily with Claude's optimized query, then make a SECOND call with results
+    if (aiResponse.searchQuery && !liveDataUsed) {
+        console.log('🔍 SMART SEARCH triggered by Claude:', aiResponse.searchQuery);
+        try {
+            const searchResult = await searchWeb(aiResponse.searchQuery);
+            if (searchResult && searchResult.length > 20) {
+                console.log('🔍 Search result received, making second Bedrock call...');
+                // Second call: same user text but with search results as live data
+                aiResponse = await callBedrock(
+                    `${userText}\n\n[LIVE DATA FROM SEARCH]:\n${searchResult}`,
+                    history,
+                    language,
+                    searchResult,
+                    userContext
+                );
+                console.log('🔍 Smart search complete — response with real-time data');
+            } else {
+                console.log('🔍 Search returned no useful results, using original response');
+            }
+        } catch (err) {
+            console.error('🔍 Smart search failed (using original response):', err.message);
+            // Fall through — use the original response
+        }
+    }
+
     const responseTimeMs = Date.now() - startTime;
 
     console.log('Pipeline AI Response:', JSON.stringify(aiResponse, null, 2));
@@ -149,20 +253,18 @@ export async function processUserQuery(userText, sessionId, phoneNumber) {
             .catch(err => console.warn('SMS send failed:', err.message));
     }
 
-    // ─── Log query for analytics (fire-and-forget) ───
-    logQuery(session.session_id, userText, intent, language, responseTimeMs, liveDataUsed)
-        .catch(err => console.warn('logQuery error:', err.message));
-
-    // ─── Add AI response to history ───
-    await addToHistory(session.session_id, 'assistant', finalResponse.response_text);
-
-    // ─── Update session state (non-blocking) ───
-    updateSession(session.session_id, {
-        current_intent: intent,
-        current_module: getModuleFromIntent(intent),
-        language: language,
-        turn_count: (session.turn_count || 0) + 1
-    }).catch(err => console.warn('Session update failed:', err.message));
+    // ─── PARALLEL PHASE 2: Post-response ops (all fire-and-forget) ───
+    Promise.allSettled([
+        addToHistory(session.session_id, 'assistant', finalResponse.response_text),
+        logQuery(session.session_id, userText, intent, language, responseTimeMs, liveDataUsed),
+        updateSession(session.session_id, {
+            current_intent: intent,
+            current_module: getModuleFromIntent(intent),
+            language: language,
+            turn_count: (session.turn_count || 0) + 1
+        }),
+        updateUserProfile(phoneNumber, intent, language)
+    ]).catch(err => console.warn('Post-processing error:', err));
 
     // Build the response text (use follow_up if present)
     let responseText = finalResponse.response_text;

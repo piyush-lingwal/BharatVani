@@ -205,10 +205,29 @@ export function detectLiveDataNeed(userText) {
         'hospital', 'dawai', 'medicine', 'vaccine', 'doctor', 'ayushman',
         // Finance
         'bank', 'loan', 'mudra', 'byaj', 'interest', 'sensex', 'share', 'market',
+        // ══ SPORTS & CRICKET ══
+        'cricket', 'match', 'score', 'ipl', 'world cup', 't20', 'odi', 'test match',
+        'india vs', 'ind vs', 'virat', 'kohli', 'rohit', 'dhoni', 'bumrah',
+        'run', 'wicket', 'over', 'batting', 'bowling', 'football', 'hockey',
+        'olympics', 'medal', 'champion', 'tournament', 'final', 'semi final',
+        'khel', 'क्रिकेट', 'मैच', 'स्कोर', 'विराट', 'रोहित', 'आईपीएल',
+        // ══ ENTERTAINMENT ══
+        'movie', 'film', 'song', 'bollywood', 'actor', 'actress',
+        'release', 'box office', 'review', 'trailer', 'web series',
+        // ══ EXAMS & RESULTS ══
+        'result', 'exam', 'upsc', 'ssc', 'neet', 'jee', 'board', 'cutoff',
+        'merit', 'admit card', 'pariksha', 'natija', 'परीक्षा', 'रिजल्ट',
+        // ══ ELECTIONS & POLITICS ══
+        'election', 'chunav', 'vote', 'pm', 'modi', 'parliament', 'lok sabha',
+        'rajya sabha', 'assembly', 'चुनाव', 'वोट',
+        // ══ GENERAL REAL-TIME ══
+        'aaj', 'today', 'latest', 'live', 'abhi', 'current', 'trending',
+        'kab', 'when', 'update', 'status', 'breaking',
         // Devanagari
         'पेट्रोल', 'डीजल', 'गैस सिलेंडर', 'बिजली', 'सब्जी', 'मंडी', 'गेहूं', 'धान',
         'ट्रेन', 'रेल', 'बस', 'टिकट', 'योजना', 'सरकार', 'राशन', 'पेंशन',
-        'नौकरी', 'भर्ती', 'रोजगार', 'अस्पताल', 'दवाई', 'बैंक', 'लोन', 'ब्याज'
+        'नौकरी', 'भर्ती', 'रोजगार', 'अस्पताल', 'दवाई', 'बैंक', 'लोन', 'ब्याज',
+        'आज', 'ताज़ा', 'लाइव', 'अभी'
     ];
     const alreadyCovered = needs.length > 0;
     if (!alreadyCovered && webSearchWords.some(w => text.includes(w) || userText.includes(w))) {
@@ -352,9 +371,10 @@ export async function getGoldPrice() {
  * Tavily Web Search — real-time internet search for any query
  */
 export async function searchWeb(query) {
-    // Cache: 15min for price-like queries, 60min for general
+    // Cache: 5min for sports/live queries, 15min for prices, 30min for general
+    const isLiveQuery = /match|score|cricket|ipl|live|election|result|breaking/i.test(query);
     const isPriceQuery = /petrol|diesel|gold|silver|rate|price|bhav|sone|dam/i.test(query);
-    const cacheTtl = isPriceQuery ? 15 : 60;
+    const cacheTtl = isLiveQuery ? 5 : (isPriceQuery ? 15 : 30);
     const cacheKey = `web#${query.toLowerCase().substring(0, 80)}`;
     const cached = await getCachedData(cacheKey);
     if (cached) return cached;
