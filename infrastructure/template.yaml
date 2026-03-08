@@ -2,7 +2,8 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
   BharatVani - Voice-First Digital Access Platform for India
-  Toll-free AI voice service powered by AWS
+  Production-grade: Provisioned Concurrency, X-Ray Tracing, DynamoDB
+  Cache, API Gateway Throttling, CloudWatch Alarms, SQS DLQ
 
 Globals:
   HttpApi:
@@ -15,10 +16,15 @@ Globals:
         - POST
         - GET
         - OPTIONS
+    # API Gateway throttling — protects Bedrock quota from abuse/spikes
+    DefaultRouteSettings:
+      ThrottlingBurstLimit: 200    # handles sudden traffic spikes
+      ThrottlingRateLimit: 100     # sustained 100 req/sec max
   Function:
     Timeout: 60
     Runtime: nodejs18.x
     MemorySize: 512
+    Tracing: Active               # AWS X-Ray tracing on all functions
     Environment:
       Variables:
         AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1'
@@ -34,15 +40,15 @@ Parameters:
   WeatherApiKey:
     Type: String
     Default: ''
-    Description: OpenWeatherMap API key (free at openweathermap.org)
+    Description: OpenWeatherMap API key
   NewsApiKey:
     Type: String
     Default: ''
-    Description: NewsAPI key (free at newsapi.org)
+    Description: NewsAPI key (unused — NDTV RSS is free)
   TavilyApiKey:
     Type: String
     Default: ''
-    Description: Tavily AI search key (free at tavily.com)
+    Description: Tavily AI search key
 
 Resources:
 
@@ -105,6 +111,25 @@ Resources:
         - Key: Project
           Value: BharatVani
 
+  # Cache table — stores weather/news/Tavily responses with TTL auto-expiry
+  CacheTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'BharatVani-Cache-${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: cacheKey
+          AttributeType: S
+      KeySchema:
+        - AttributeName: cacheKey
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      Tags:
+        - Key: Project
+          Value: BharatVani
+
   # ========================================
   # S3 Bucket for Knowledge Base
   # ========================================
@@ -128,6 +153,19 @@ Resources:
           Value: BharatVani
 
   # ========================================
+  # SQS Dead Letter Queue
+  # ========================================
+
+  OrchestratorDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub 'BharatVani-DLQ-${Environment}'
+      MessageRetentionPeriod: 1209600  # 14 days max retention
+      Tags:
+        - Key: Project
+          Value: BharatVani
+
+  # ========================================
   # Lambda Function — The Orchestrator
   # ========================================
 
@@ -137,12 +175,26 @@ Resources:
       FunctionName: !Sub 'BharatVani-Orchestrator-${Environment}'
       CodeUri: ../lambda/orchestrator/
       Handler: index.handler
-      Description: BharatVani main orchestrator — handles voice AI pipeline
+      Description: BharatVani main orchestrator — handles full voice AI pipeline
+      # -------------------------------------------------------
+      # PRODUCTION SCALING (requires AWS quota increase first):
+      # Request concurrency increase: aws support create-case
+      # Then uncomment these lines:
+      # AutoPublishAlias: live
+      # ProvisionedConcurrencyConfig:
+      #   ProvisionedConcurrentExecutions: 3   # warm instances, no cold starts
+      # ReservedConcurrentExecutions: 80       # ~80% of total account concurrency
+      # -------------------------------------------------------
+      Tracing: Active
+      DeadLetterQueue:
+        Type: SQS
+        TargetArn: !GetAtt OrchestratorDLQ.Arn
       Environment:
         Variables:
           SESSIONS_TABLE: !Ref SessionsTable
           USERS_TABLE: !Ref UsersTable
           QUERY_LOGS_TABLE: !Ref QueryLogsTable
+          CACHE_TABLE: !Ref CacheTable
           KB_BUCKET: !Ref KnowledgeBucket
           AUDIO_BUCKET: !Ref KnowledgeBucket
           BEDROCK_MODEL_ID: !Ref BedrockModelId
@@ -172,17 +224,19 @@ Resources:
             Path: /chat
             Method: POST
       Policies:
-        # DynamoDB access
+        # DynamoDB — sessions, users, logs, cache
         - DynamoDBCrudPolicy:
             TableName: !Ref SessionsTable
         - DynamoDBCrudPolicy:
             TableName: !Ref UsersTable
         - DynamoDBCrudPolicy:
             TableName: !Ref QueryLogsTable
-        # S3 read + write (for Polly audio)
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CacheTable
+        # S3 — knowledge base
         - S3CrudPolicy:
             BucketName: !Ref KnowledgeBucket
-        # Bedrock access
+        # Bedrock — invoke Claude models
         - Version: '2012-10-17'
           Statement:
             - Effect: Allow
@@ -193,24 +247,41 @@ Resources:
                 - !Sub 'arn:aws:bedrock:${AWS::Region}::foundation-model/*'
                 - !Sub 'arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:inference-profile/*'
                 - 'arn:aws:bedrock:*::foundation-model/*'
-        # SNS for SMS
+        # SNS — OTP and confirmation SMS
         - Version: '2012-10-17'
           Statement:
             - Effect: Allow
               Action:
                 - sns:Publish
               Resource: '*'
-        # Polly for TTS (used by Connect)
+        # Polly — TTS synthesis
         - Version: '2012-10-17'
           Statement:
             - Effect: Allow
               Action:
                 - polly:SynthesizeSpeech
               Resource: '*'
+        # SQS — write to DLQ on failure
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - sqs:SendMessage
+              Resource: !GetAtt OrchestratorDLQ.Arn
+        # X-Ray — distributed tracing
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - xray:PutTraceSegments
+                - xray:PutTelemetryRecords
+                - xray:GetSamplingRules
+                - xray:GetSamplingTargets
+              Resource: '*'
       Tags:
         Project: BharatVani
 
-  # Lambda permission for Amazon Connect
+  # Lambda permission for Amazon Connect (for future Connect integration)
   ConnectLambdaPermission:
     Type: AWS::Lambda::Permission
     Properties:
@@ -219,14 +290,82 @@ Resources:
       Principal: connect.amazonaws.com
       SourceAccount: !Ref AWS::AccountId
 
+  # ========================================
+  # CloudWatch Alarms
+  # ========================================
+
+  # Alarm 1: Error count > 10 in 5 minutes
+  LambdaErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub 'BharatVani-LambdaErrors-${Environment}'
+      AlarmDescription: 'Lambda error count exceeds 10 in 5 minutes — investigate immediately'
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref OrchestratorFunction
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 10
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      Tags:
+        - Key: Project
+          Value: BharatVani
+
+  # Alarm 2: Any Lambda throttles (reserved concurrency protecting backend)
+  LambdaThrottleAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub 'BharatVani-LambdaThrottles-${Environment}'
+      AlarmDescription: 'Lambda throttling detected — consider raising ReservedConcurrentExecutions'
+      Namespace: AWS/Lambda
+      MetricName: Throttles
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref OrchestratorFunction
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      Tags:
+        - Key: Project
+          Value: BharatVani
+
+  # Alarm 3: P95 duration > 10s (voice calls need response in < 8s ideally)
+  LambdaDurationAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub 'BharatVani-LambdaDuration-${Environment}'
+      AlarmDescription: 'Lambda P95 latency exceeds 10s — degraded voice call experience'
+      Namespace: AWS/Lambda
+      MetricName: Duration
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref OrchestratorFunction
+      ExtendedStatistic: p95
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 10000
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      Tags:
+        - Key: Project
+          Value: BharatVani
+
 Outputs:
   ApiEndpoint:
-    Description: API Gateway URL (use this as Twilio webhook)
+    Description: API Gateway URL (use this as Twilio webhook base)
     Value: !Sub 'https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com'
 
   TwilioWebhookUrl:
     Description: Set this as your Twilio Voice webhook URL
     Value: !Sub 'https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com/voice/incoming'
+
   OrchestratorFunctionArn:
     Description: Orchestrator Lambda ARN (use this in Connect)
     Value: !GetAtt OrchestratorFunction.Arn
@@ -235,9 +374,13 @@ Outputs:
     Description: DynamoDB Sessions table name
     Value: !Ref SessionsTable
 
-  UsersTableName:
-    Description: DynamoDB Users table name
-    Value: !Ref UsersTable
+  CacheTableName:
+    Description: DynamoDB Cache table name (weather/news/Tavily with TTL)
+    Value: !Ref CacheTable
+
+  DLQUrl:
+    Description: SQS Dead Letter Queue URL for failed invocations
+    Value: !Ref OrchestratorDLQ
 
   KnowledgeBucketName:
     Description: S3 Knowledge Base bucket

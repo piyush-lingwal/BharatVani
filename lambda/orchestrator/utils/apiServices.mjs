@@ -1,7 +1,60 @@
 /**
  * BharatVani — Real-Time API Services
  * Fetches live data: weather, news, gold/silver prices, Tavily web search
+ * Production: DynamoDB cache layer prevents redundant API calls
  */
+
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
+
+// Singleton DynamoDB client (reused across warm Lambda invocations)
+const _ddbClient = new DynamoDBClient({});
+const _docClient = DynamoDBDocumentClient.from(_ddbClient);
+const CACHE_TABLE = process.env.CACHE_TABLE || '';
+
+/**
+ * Read from DynamoDB cache
+ * Returns cached string value or null if miss/expired
+ */
+async function getCachedData(key) {
+    if (!CACHE_TABLE) return null;
+    try {
+        const result = await _docClient.send(new GetCommand({
+            TableName: CACHE_TABLE,
+            Key: { cacheKey: key }
+        }));
+        const item = result.Item;
+        if (!item) return null;
+        // DynamoDB TTL is eventually consistent — double-check expiry client-side
+        if (item.ttl && item.ttl < Math.floor(Date.now() / 1000)) return null;
+        console.log('Cache HIT:', key);
+        return item.value;
+    } catch (err) {
+        console.warn('Cache read error (non-fatal):', err.message);
+        return null;
+    }
+}
+
+/**
+ * Write to DynamoDB cache with TTL
+ * @param {string} key   - cache key (e.g. 'weather#Delhi')
+ * @param {string} value - data to cache
+ * @param {number} ttlMinutes - how long to cache
+ */
+async function setCachedData(key, value, ttlMinutes) {
+    if (!CACHE_TABLE || !value) return;
+    try {
+        const ttl = Math.floor(Date.now() / 1000) + (ttlMinutes * 60);
+        await _docClient.send(new PutCommand({
+            TableName: CACHE_TABLE,
+            Item: { cacheKey: key, value, ttl, cachedAt: new Date().toISOString() }
+        }));
+        console.log('Cache SET:', key, `(TTL: ${ttlMinutes}min)`);
+    } catch (err) {
+        console.warn('Cache write error (non-fatal):', err.message);
+        // Cache failures are non-fatal — API will be called directly
+    }
+}
 
 // API keys are read inside each function (not module-level) to ensure Lambda env vars are always fresh
 
@@ -194,8 +247,13 @@ function extractCity(text) {
  * Fetch weather from OpenWeatherMap
  */
 export async function getWeather(city = 'Delhi') {
+    // Cache check first — weather changes slowly, 30 min TTL is accurate
+    const cacheKey = `weather#${city.toLowerCase()}`;
+    const cached = await getCachedData(cacheKey);
+    if (cached) return cached;
+
     const WEATHER_API_KEY = process.env.WEATHER_API_KEY || '';
-    console.log('getWeather called for city:', city, '| key present:', !!WEATHER_API_KEY, '| key length:', WEATHER_API_KEY.length);
+    console.log('getWeather called for city:', city, '| key present:', !!WEATHER_API_KEY);
     if (!WEATHER_API_KEY) {
         return `Mausam ki jaankari ke liye IMD helpline 1800-180-1717 par call karein.`;
     }
@@ -211,7 +269,6 @@ export async function getWeather(city = 'Delhi') {
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
         const data = await response.json();
-        console.log('Weather data received:', data.main?.temp, data.weather?.[0]?.main);
         const temp = Math.round(data.main.temp);
         const feelsLike = Math.round(data.main.feels_like);
         const humidity = data.main.humidity;
@@ -219,7 +276,9 @@ export async function getWeather(city = 'Delhi') {
         const hindiCondition = WEATHER_HINDI[condition] || data.weather[0].description;
         const windSpeed = Math.round(data.wind.speed * 3.6);
 
-        return `LIVE WEATHER ${city}: ${temp}°C (feels ${feelsLike}°C), ${hindiCondition}, humidity ${humidity}%, wind ${windSpeed}km/h.`;
+        const result = `LIVE WEATHER ${city}: ${temp}°C (feels ${feelsLike}°C), ${hindiCondition}, humidity ${humidity}%, wind ${windSpeed}km/h.`;
+        await setCachedData(cacheKey, result, 30); // cache 30 minutes
+        return result;
     } catch (err) {
         console.error('Weather API error:', err.message);
         return '';
@@ -230,11 +289,15 @@ export async function getWeather(city = 'Delhi') {
  * Fetch top Indian news headlines
  */
 export async function getNews() {
+    // Cache check — news headlines refresh hourly
+    const cacheKey = 'news#headlines';
+    const cached = await getCachedData(cacheKey);
+    if (cached) return cached;
+
     console.log('getNews called — using NDTV RSS feed');
     try {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 5000);
-        // NDTV India RSS — free, no auth, works from servers
         const url = 'https://feeds.feedburner.com/ndtvnews-india-news';
         const response = await fetch(url, {
             signal: controller.signal,
@@ -245,7 +308,6 @@ export async function getNews() {
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
         const xml = await response.text();
-        // Safe string-based title extraction (no regex to avoid syntax errors)
         const headlines = [];
         let pos = 0;
         let skippedFirst = false;
@@ -255,15 +317,15 @@ export async function getNews() {
             const e = xml.indexOf('</title>', s);
             if (e === -1) break;
             let title = xml.substring(s + 7, e).trim();
-            // Strip CDATA if present
             if (title.startsWith('<![CDATA[')) title = title.slice(9, title.lastIndexOf(']]>')).trim();
             pos = e + 8;
-            if (!skippedFirst) { skippedFirst = true; continue; } // skip feed title
+            if (!skippedFirst) { skippedFirst = true; continue; }
             if (title.length > 5) headlines.push((headlines.length + 1) + '. ' + title);
         }
         const headlineText = headlines.join(' | ');
-        console.log('News headlines fetched:', headlineText.substring(0, 100));
-        return headlineText ? 'TODAY\'S TOP INDIA NEWS: ' + headlineText : '';
+        const result = headlineText ? 'TODAY\'S TOP INDIA NEWS: ' + headlineText : '';
+        if (result) await setCachedData(cacheKey, result, 60); // cache 60 minutes
+        return result;
     } catch (err) {
         console.error('News RSS error:', err.message);
         return '';
@@ -282,6 +344,13 @@ export async function getGoldPrice() {
  * Tavily Web Search — real-time internet search for any query
  */
 export async function searchWeb(query) {
+    // Cache: 15min for price-like queries, 60min for general
+    const isPriceQuery = /petrol|diesel|gold|silver|rate|price|bhav|sone|dam/i.test(query);
+    const cacheTtl = isPriceQuery ? 15 : 60;
+    const cacheKey = `web#${query.toLowerCase().substring(0, 80)}`;
+    const cached = await getCachedData(cacheKey);
+    if (cached) return cached;
+
     const TAVILY_API_KEY = process.env.TAVILY_API_KEY || '';
     console.log('searchWeb called | key present:', !!TAVILY_API_KEY, '| query:', query.substring(0, 50));
     if (!TAVILY_API_KEY) return '';
@@ -309,16 +378,20 @@ export async function searchWeb(query) {
         const data = await response.json();
         console.log('Tavily response received, answer length:', data.answer?.length || 0);
 
+        let result = '';
         if (data.answer && data.answer.length > 20) {
-            return 'WEB SEARCH RESULT: ' + data.answer;
+            result = 'WEB SEARCH RESULT: ' + data.answer;
+        } else {
+            // Fallback: use top result snippets
+            const snippets = (data.results || []).slice(0, 2)
+                .map(r => r.content ? r.content.substring(0, 250) : '')
+                .filter(Boolean)
+                .join(' | ');
+            result = snippets ? 'WEB SEARCH: ' + snippets : '';
         }
 
-        // Fallback: use top result snippets
-        const snippets = (data.results || []).slice(0, 2)
-            .map(r => r.content ? r.content.substring(0, 250) : '')
-            .filter(Boolean)
-            .join(' | ');
-        return snippets ? 'WEB SEARCH: ' + snippets : '';
+        if (result) await setCachedData(cacheKey, result, cacheTtl);
+        return result;
     } catch (err) {
         console.error('Tavily error:', err.message);
         return '';

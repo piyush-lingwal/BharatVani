@@ -1,6 +1,7 @@
 /**
  * BharatVani — Bedrock AI Client
  * Single-call intent detection + response generation
+ * Production: Exponential backoff retry on Bedrock throttling
  */
 
 import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime';
@@ -21,11 +22,48 @@ const s3Client = new S3Client({
 const MODEL_ID = process.env.BEDROCK_MODEL_ID || 'anthropic.claude-3-5-sonnet-20241022-v2:0';
 const KB_BUCKET = process.env.KB_BUCKET || 'bharatvani-knowledge-base';
 
-// Cache for system prompt and knowledge base
+// Cache for system prompt and knowledge base (warm Lambda reuse)
 let cachedSystemPrompt = null;
 let cachedSchemes = null;
 let cachedMandiPrices = null;
 let cachedFarmingTips = null;
+
+/**
+ * Exponential backoff retry wrapper
+ * Only retries on throttling/transient errors — fails fast on logic errors
+ * @param {Function} fn      - async function to retry
+ * @param {number} maxRetries - max attempts (default: 3)
+ * @param {number} baseDelay  - base delay in ms (doubles each attempt)
+ */
+async function withRetry(fn, maxRetries = 3, baseDelay = 1000) {
+    const RETRIABLE = [
+        'ThrottlingException',
+        'ServiceUnavailableException',
+        'ProvisionedThroughputExceededException',
+        'RequestLimitExceeded',
+        'InternalServerException'
+    ];
+    let lastErr;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            return await fn();
+        } catch (err) {
+            lastErr = err;
+            const errName = err.name || err.constructor?.name || '';
+            const isRetriable = RETRIABLE.some(r => errName.includes(r)) ||
+                (err.$metadata?.httpStatusCode === 429) ||
+                (err.$metadata?.httpStatusCode >= 500);
+            if (!isRetriable || attempt === maxRetries) {
+                console.error(`Bedrock error (attempt ${attempt}/${maxRetries}):`, errName, err.message);
+                throw err;
+            }
+            const delay = baseDelay * Math.pow(2, attempt - 1);
+            console.warn(`Bedrock throttled (attempt ${attempt}/${maxRetries}), retrying in ${delay}ms...`);
+            await new Promise(r => setTimeout(r, delay));
+        }
+    }
+    throw lastErr;
+}
 
 /**
  * Resolve knowledge base path — works both locally and in Lambda
@@ -207,7 +245,8 @@ export async function callBedrock(userText, conversationHistory = [], language =
             body: JSON.stringify(payload)
         });
 
-        const response = await bedrockClient.send(command);
+        // Wrap with retry — handles Bedrock throttling gracefully
+        const response = await withRetry(() => bedrockClient.send(command));
         const responseBody = JSON.parse(new TextDecoder().decode(response.body));
 
         // Get plain text response — no JSON parsing needed
