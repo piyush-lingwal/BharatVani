@@ -1,11 +1,49 @@
 {
-    "name": "PM SVANidhi (Street Vendor Loan)",
-    "hindi_name": "पीएम स्वनिधि",
-    "category": "street_vendors",
-    "summary": "₹10,000-₹50,000 loan for street vendors without collateral",
-    "hindi_summary": "Rehri-patri waalon ko bina guarantee ke 10 se 50 hazaar tak ka loan",
-    "benefits": "₹10,000 first loan, ₹20,000 second, ₹50,000 third, 7% interest subsidy, digital payments cashback",
-    "eligibility": "Street vendors with vending certificate or letter of recommendation",
+    "id": "pm_svanidhi",
+    "name": "PM SVANidhi",
+    "full_name": "Pradhan Mantri Street Vendor's AtmaNirbhar Nidhi",
+    "hindi_name": "प्रधानमंत्री स्ट्रीट वेंडर्स आत्मनिर्भर निधि",
+    "category": "livelihood",
+    "benefit": "Collateral-free working capital loan — ₹10,000 (1st), ₹20,000 (2nd), ₹50,000 (3rd), plus 7% interest subsidy and cashback on digital transactions",
+    "benefit_hindi": "Bina guarantee ke loan — pehla ₹10,000, doosra ₹20,000, teesra ₹50,000, 7% byaaj chhoot",
+    "eligibility": {
+        "description": "Street vendors with Certificate of Vending or Letter of Recommendation from ULB",
+        "description_hindi": "Street vendor jiske paas vending certificate ya nagar nigam ki chitthi ho",
+        "criteria": [
+            "Street vendor with vending certificate or recommendation",
+            "Identified in ULB survey or has vending certificate",
+            "Must repay previous loan to get next tier"
+        ],
+        "exclusions": [
+            "Vendors not identified by Urban Local Body"
+        ]
+    },
+    "documents_required": [
+        "Aadhaar Card",
+        "Vending Certificate or Letter of Recommendation from ULB",
+        "Bank account details",
+        "Passport size photo",
+        "Mobile number"
+    ],
+    "how_to_apply": {
+        "steps": [
+            "Visit pmsvanidhi.mohua.gov.in",
+            "Register with mobile number",
+            "Apply for loan (₹10,000 first time)",
+            "Application goes to lending bank",
+            "Loan sanctioned within 15 days",
+            "Repay in 12 monthly installments, earn cashback on digital payments"
+        ],
+        "steps_hindi": [
+            "pmsvanidhi.mohua.gov.in par jaayein",
+            "Mobile number se register karein",
+            "₹10,000 loan ke liye apply karein",
+            "Application bank ko jayegi",
+            "15 din mein loan mil jaayega",
+            "12 mahine mein vapas karein, digital payment par cashback milega"
+        ]
+    },
     "helpline": "1800-11-1979",
-    "website": "pmsvanidhi.mohua.gov.in"
+    "website": "pmsvanidhi.mohua.gov.in",
+    "hindi_summary": "PM SVANidhi mein street vendor ko bina guarantee ke 10000 rupaye ka loan milta hai. Samay par vapas karne par 20000 aur phir 50000 tak ka loan milta hai. Online apply karein ya nagar nigam se sampark karein."
 }

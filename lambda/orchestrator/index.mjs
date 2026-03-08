@@ -8,11 +8,9 @@
  */
 
 import { createSession, getSession, updateSession, addToHistory } from './utils/session.mjs';
-import { callBedrock } from './utils/bedrock.mjs';
 import { sendOTP, verifyOTP, sendConfirmationSMS, generateOTP } from './utils/sms.mjs';
-import { handleGovtScheme } from './handlers/govtSchemes.mjs';
-import { handleFarmerQuery } from './handlers/farmerAssistant.mjs';
-import { handleIncoming, handleGather } from './handlers/twilio.mjs';
+import { handleIncoming, handleGather, handleLanguage } from './handlers/twilio.mjs';
+import { processUserQuery } from './utils/pipeline.mjs';
 import { parse } from 'querystring';
 
 // Load welcome/error messages
@@ -21,6 +19,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
 
 let welcomeMessages = null;
 let errorResponses = null;
@@ -157,6 +156,9 @@ async function handleApiGateway(event) {
         let twimlResponse;
         if (path.includes('/voice/incoming')) {
             twimlResponse = await handleIncoming(params);
+        } else if (path.includes('/voice/language')) {
+            const sessionId = queryParams.sessionId || '';
+            twimlResponse = await handleLanguage(params, sessionId);
         } else if (path.includes('/voice/gather')) {
             const sessionId = queryParams.sessionId || '';
             twimlResponse = await handleGather(params, sessionId);
@@ -219,30 +221,15 @@ async function handleWebChat(body, corsHeaders) {
 
     console.log(`Web chat [${sessionId}]: "${message}"`);
 
-    // Get conversation history
-    const conversationHistory = session.conversation_history || [];
-
-    // Call Bedrock AI
-    const aiResponse = await callBedrock(message, conversationHistory, 'hi-IN');
-    const responseText = aiResponse.response_text || 'Maaf kijiye, kripya dobara likhe.';
-
-    // Update session with conversation
-    const updatedHistory = [
-        ...conversationHistory,
-        { role: 'user', text: message },
-        { role: 'assistant', text: responseText }
-    ].slice(-10);
-
-    await updateSession(sessionId, {
-        conversation_history: updatedHistory,
-        turn_count: (session.turn_count || 0) + 1
-    });
+    // Use the shared processing pipeline
+    const result = await processUserQuery(message, sessionId, 'web-user');
 
     return {
         statusCode: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            response: responseText,
+            response: result.responseText,
+            intent: result.intent,
             sessionId
         })
     };
@@ -266,7 +253,7 @@ async function handleNewCall(phoneNumber) {
 }
 
 /**
- * Handle user's spoken input — the core conversation loop
+ * Handle user's spoken input — the core conversation loop (Connect/direct mode)
  */
 async function handleUserInput(sessionId, phoneNumber, userText) {
     if (!userText || userText.trim() === '') {
@@ -280,73 +267,14 @@ async function handleUserInput(sessionId, phoneNumber, userText) {
 
     console.log(`User input [${sessionId}]: "${userText}"`);
 
-    // Load or create session
-    let session = sessionId ? await getSession(sessionId) : null;
-    if (!session) {
-        const result = await createSession(phoneNumber);
-        session = result.session;
+    const result = await processUserQuery(userText, sessionId, phoneNumber);
+
+    if (result.isEndCall) {
+        const goodbye = welcomeMessages?.goodbye?.[result.language] || 'Shukriya! Dobara call karein!';
+        return buildConnectResponse(goodbye, result.language, sessionId, 'end');
     }
 
-    const language = session.language || 'hi-IN';
-
-    // Add user's message to history
-    const history = await addToHistory(session.session_id, 'user', userText);
-
-    // Call Bedrock — SINGLE CALL for intent detection + response
-    const aiResponse = await callBedrock(userText, session.conversation_history || [], language);
-
-    console.log('AI Response:', JSON.stringify(aiResponse, null, 2));
-
-    // Route based on intent
-    let finalResponse = aiResponse;
-
-    const intent = aiResponse.intent;
-    const entities = aiResponse.entities || {};
-
-    // For scheme and farmer intents, use dedicated handlers for richer responses
-    if (intent === 'govt_scheme_info' || intent === 'govt_scheme_eligibility') {
-        const schemeResult = await handleGovtScheme(intent, entities, session);
-        if (schemeResult.response_text) {
-            finalResponse.response_text = schemeResult.response_text;
-        }
-        if (schemeResult.sms_content) {
-            finalResponse.sms_content = schemeResult.sms_content;
-        }
-    } else if (intent === 'crop_price' || intent === 'weather_forecast' || intent === 'farming_advice') {
-        const farmResult = await handleFarmerQuery(intent, entities, session);
-        if (farmResult.response_text) {
-            finalResponse.response_text = farmResult.response_text;
-        }
-        if (farmResult.sms_content) {
-            finalResponse.sms_content = farmResult.sms_content;
-        }
-    } else if (intent === 'end_call') {
-        const goodbye = welcomeMessages?.goodbye?.[language] || 'Shukriya! Dobara call karein!';
-        return buildConnectResponse(goodbye, language, session.session_id, 'end');
-    }
-
-    // Send SMS if there's content to send
-    if (finalResponse.sms_content && phoneNumber !== '+910000000000') {
-        await sendConfirmationSMS(phoneNumber, finalResponse.sms_content);
-    }
-
-    // Add AI response to history
-    await addToHistory(session.session_id, 'assistant', finalResponse.response_text);
-
-    // Update session state
-    await updateSession(session.session_id, {
-        current_intent: intent,
-        current_module: getModuleFromIntent(intent),
-        language: language
-    });
-
-    // Build the response text (use follow_up if present)
-    let responseText = finalResponse.response_text;
-    if (finalResponse.follow_up) {
-        responseText += ` ${finalResponse.follow_up}`;
-    }
-
-    return buildConnectResponse(responseText, language, session.session_id, 'continue');
+    return buildConnectResponse(result.responseText, result.language, sessionId, 'continue');
 }
 
 /**

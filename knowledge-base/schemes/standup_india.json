@@ -1,11 +1,51 @@
 {
-    "name": "Stand-Up India",
-    "hindi_name": "स्टैंड-अप इंडिया",
+    "id": "standup_india",
+    "name": "Stand Up India",
+    "full_name": "Stand Up India Scheme",
+    "hindi_name": "स्टैंड अप इंडिया",
     "category": "entrepreneurship",
-    "summary": "Bank loans ₹10 lakh to ₹1 crore for SC/ST and women entrepreneurs",
-    "hindi_summary": "SC/ST aur mahilaon ko apna business shuru karne ke liye 10 lakh se 1 crore tak ka loan",
-    "benefits": "Loan ₹10 lakh to ₹1 crore, composite loan for manufacturing/services/trading",
-    "eligibility": "SC/ST or women, age 18+, no existing default, new enterprise only",
+    "benefit": "Bank loan ₹10 lakh to ₹1 crore for SC/ST and women entrepreneurs to start businesses",
+    "benefit_hindi": "SC/ST aur mahila udyamiyon ko ₹10 lakh se ₹1 crore tak ka bank loan",
+    "eligibility": {
+        "description": "SC/ST and women entrepreneurs for greenfield enterprises in manufacturing, services, or trading",
+        "description_hindi": "SC/ST aur mahila udyami jo naya vyavsaay shuru karna chahte hain",
+        "criteria": [
+            "SC/ST entrepreneur OR woman entrepreneur (any caste)",
+            "Age 18+",
+            "New business (greenfield enterprise) only",
+            "Manufacturing, services, or trading sector",
+            "Should not be a defaulter with any bank"
+        ],
+        "exclusions": [
+            "Existing businesses (expansion not covered)",
+            "Loan defaulters"
+        ]
+    },
+    "documents_required": [
+        "Aadhaar Card",
+        "Caste certificate (for SC/ST)",
+        "Business plan",
+        "Bank account details",
+        "Address proof",
+        "Identity proof"
+    ],
+    "how_to_apply": {
+        "steps": [
+            "Visit standupmitra.in or any scheduled commercial bank",
+            "Register on Stand Up India portal",
+            "Submit business plan and documents",
+            "Bank processes application",
+            "Loan sanctioned for greenfield project"
+        ],
+        "steps_hindi": [
+            "standupmitra.in ya kisi bhi bank mein jaayein",
+            "Stand Up India portal par register karein",
+            "Business plan aur documents submit karein",
+            "Bank application process karega",
+            "Naye vyavsaay ke liye loan manzoor hoga"
+        ]
+    },
     "helpline": "1800-180-1111",
-    "website": "standupmitra.in"
+    "website": "standupmitra.in",
+    "hindi_summary": "Stand Up India mein SC/ST aur mahila udyamiyon ko 10 lakh se 1 crore rupaye tak ka bank loan milta hai naya vyavsaay shuru karne ke liye. standupmitra.in par apply karein ya bank jaayein."
 }

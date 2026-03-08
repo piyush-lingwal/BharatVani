@@ -30,7 +30,13 @@
 
 ---
 
-## 📞 One Number. Every Indian.
+## 📞 Two Ways to Access BharatVani
+
+### 🔊 Option 1: Call (Any Phone — Feature Phone, Smartphone, Landline)
+
+```
+📞 Toll-Free Number: 0018127923339
+```
 
 ```
                     ┌──────────────────────────────────────┐
@@ -49,6 +55,21 @@
 ```
 
 > **Ramesh calls from a ₹500 feature phone on 2G. BharatVani answers in flawless Hindi with real, live information — in seconds.**
+
+### 🌐 Option 2: Web Portal (Live Demo on Browser)
+
+> **🔗 [https://main.d82rgzguc9ef8.amplifyapp.com](https://main.d82rgzguc9ef8.amplifyapp.com)**
+
+Try the **live interactive demo** — talk to BharatVani directly from your browser using voice or text. Powered by Web Speech API + Amazon Bedrock.
+
+| Feature | Phone Call | Web Portal |
+|---|---|---|
+| **Access** | Dial `0018127923339` | Visit Amplify URL |
+| **Voice Input** | Speak naturally on call | Browser mic (Web Speech API) |
+| **Text Input** | ❌ | ✅ Type questions |
+| **AI Response** | Spoken over call (Twilio TTS) | Spoken + displayed (Browser TTS) |
+| **Works on** | Any phone (2G/3G/4G/5G) | Any modern browser |
+| **Languages** | Hindi | Hindi + English |
 
 ---
 
@@ -336,9 +357,22 @@ BharatVani/
 │       ├── welcome_messages.json  ← Greeting variations
 │       └── error_responses.json   ← Graceful failure messages
 │
-└── web/
-    ├── chat.html                  ← Web chat interface (testing)
-    └── call.html                  ← Browser voice call (Web Speech API)
+├── frontend/                         ← React + Vite landing page (deployed to Amplify)
+│   ├── src/
+│   │   ├── components/               ← Hero, Demo, Capabilities, Architecture, etc.
+│   │   ├── LanguageContext.jsx        ← i18n translations (6 languages)
+│   │   ├── App.jsx                    ← Main app with lazy-loaded routes
+│   │   └── index.css                  ← Global styles + design tokens
+│   ├── package.json
+│   └── vite.config.js
+│
+├── connect/                           ← Amazon Connect contact flows
+│
+├── scripts/                           ← Deployment & utility scripts
+│   └── deploy.sh
+│
+└── infrastructure/
+    └── template.yaml                  ← SAM template (Lambda + API GW + DynamoDB + S3)
 ```
 
 ---

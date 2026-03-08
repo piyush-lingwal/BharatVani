@@ -92,22 +92,26 @@ export async function updateSession(sessionId, updates) {
  * Add a conversation turn to session history
  */
 export async function addToHistory(sessionId, role, text) {
-  const session = await getSession(sessionId);
-  if (!session) return;
+  const newEntry = { role, text, timestamp: new Date().toISOString() };
 
-  const history = session.conversation_history || [];
-
-  // Keep last 10 turns to manage prompt size
-  history.push({ role, text, timestamp: new Date().toISOString() });
-  if (history.length > 10) {
-    history.splice(0, history.length - 10);
+  try {
+    // Use list_append — single DynamoDB call instead of GET + UPDATE
+    await docClient.send(new UpdateCommand({
+      TableName: SESSIONS_TABLE,
+      Key: { session_id: sessionId },
+      UpdateExpression: 'SET conversation_history = list_append(if_not_exists(conversation_history, :empty), :newItem), #la = :now',
+      ExpressionAttributeNames: { '#la': 'last_active' },
+      ExpressionAttributeValues: {
+        ':newItem': [newEntry],
+        ':empty': [],
+        ':now': new Date().toISOString()
+      }
+    }));
+  } catch (err) {
+    console.warn('addToHistory failed (non-fatal):', err.message);
   }
 
-  await updateSession(sessionId, {
-    conversation_history: history
-  });
-
-  return history;
+  return [newEntry];
 }
 
 /**

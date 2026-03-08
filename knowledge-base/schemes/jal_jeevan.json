@@ -1,11 +1,45 @@
 {
+    "id": "jal_jeevan",
     "name": "Jal Jeevan Mission",
+    "full_name": "Jal Jeevan Mission - Har Ghar Jal",
     "hindi_name": "जल जीवन मिशन",
     "category": "water",
-    "summary": "Tap water connection to every rural household — Har Ghar Nal Se Jal",
-    "hindi_summary": "Har ghar mein nal ka paani — gramin gharon mein nalkoop connection",
-    "benefits": "Free tap water connection, 55 litres per person per day, community water testing",
-    "eligibility": "Every rural household without tap water connection",
-    "helpline": "1800-11-5432",
-    "website": "jaljeevanmission.gov.in"
+    "benefit": "Piped drinking water connection to every rural household, 55 litres per person per day",
+    "benefit_hindi": "Har gaon ke ghar mein pipeline se saaf paani, 55 litre har vyakti ko roz",
+    "eligibility": {
+        "description": "All rural households without piped water connection",
+        "description_hindi": "Gaon ke woh ghar jinmein pipeline se paani nahi aata",
+        "criteria": [
+            "Rural household without tap water connection",
+            "Priority: SC/ST households, quality-affected areas, drought-prone areas",
+            "No income criterion"
+        ],
+        "exclusions": [
+            "Urban households (covered under AMRUT Mission)"
+        ]
+    },
+    "documents_required": [
+        "Aadhaar Card",
+        "Address proof",
+        "Application to Gram Panchayat"
+    ],
+    "how_to_apply": {
+        "steps": [
+            "Contact Gram Panchayat or Block Development Office",
+            "Submit application for tap water connection",
+            "Village Water and Sanitation Committee (VWSC) will process",
+            "Connection provided by implementing agency",
+            "No charge for connection in most states"
+        ],
+        "steps_hindi": [
+            "Gram Panchayat ya Block Development Office se sampark karein",
+            "Tap water connection ke liye application dein",
+            "Gaon ki Jal Samiti application process karegi",
+            "Connection free mein diya jaata hai",
+            "Koi charge nahi lagta zyaadatar rajyon mein"
+        ]
+    },
+    "helpline": "1800-115-515",
+    "website": "jaljeevanmission.gov.in",
+    "hindi_summary": "Jal Jeevan Mission mein har gaon ke ghar mein pipeline se saaf paani aayega. Gram Panchayat mein application dein — connection free hai. Helpline 1800-115-515 par call karein."
 }

@@ -1,11 +1,47 @@
 {
+    "id": "food_security",
     "name": "National Food Security Act (Ration)",
+    "full_name": "National Food Security Act, 2013",
     "hindi_name": "राष्ट्रीय खाद्य सुरक्षा अधिनियम",
     "category": "food_security",
-    "summary": "Subsidized food grains (rice ₹3/kg, wheat ₹2/kg) through ration shops",
-    "hindi_summary": "Ration ki dukaan se sasta anaj — chawal 3 rupaye kilo, gehu 2 rupaye kilo",
-    "benefits": "Rice at ₹3/kg, wheat at ₹2/kg, coarse grains at ₹1/kg, 5kg per person per month",
-    "eligibility": "BPL families, Antyodaya card holders, priority households",
-    "helpline": "1800-345-6789",
-    "website": "nfsa.gov.in"
+    "benefit": "Subsidized food grains — rice ₹3/kg, wheat ₹2/kg, coarse grains ₹1/kg, 5kg per person per month",
+    "benefit_hindi": "Sasta anaj — chawal 3 rupaye kilo, gehu 2 rupaye kilo, 5 kilo har vyakti ko har mahine",
+    "eligibility": {
+        "description": "BPL families, Antyodaya card holders, priority households identified by state governments",
+        "description_hindi": "BPL parivaar, Antyodaya card wale, aur rajya sarkar dwara chune gaye parivaar",
+        "criteria": [
+            "BPL (Below Poverty Line) family",
+            "Antyodaya Anna Yojana (AAY) card holder",
+            "Priority household identified by state government",
+            "75% rural and 50% urban population covered"
+        ],
+        "exclusions": [
+            "Families above BPL threshold set by state",
+            "Income tax payers"
+        ]
+    },
+    "documents_required": [
+        "Ration Card (BPL/AAY/PHH)",
+        "Aadhaar Card",
+        "Address proof"
+    ],
+    "how_to_apply": {
+        "steps": [
+            "Apply for ration card at District Supply Office or online portal",
+            "Submit family details and income proof",
+            "After verification, ration card issued",
+            "Visit nearest Fair Price Shop (ration ki dukaan) with ration card",
+            "Authenticate with Aadhaar fingerprint to collect grains"
+        ],
+        "steps_hindi": [
+            "District Supply Office ya online portal par ration card ke liye apply karein",
+            "Parivaar ki jaankari aur income proof dein",
+            "Verify hone ke baad ration card milega",
+            "Nearest ration ki dukaan par ration card lekar jaayein",
+            "Aadhaar fingerprint se verify karke anaj lein"
+        ]
+    },
+    "helpline": "1800-345-6789 / 1967",
+    "website": "nfsa.gov.in",
+    "hindi_summary": "Rashtriya Khadya Suraksha mein BPL parivaar ko sasta anaj milta hai — chawal 3 rupaye kilo, gehu 2 rupaye kilo. Ration card se ration ki dukaan se anaj lein. Ration card ke liye District Supply Office jaayein."
 }

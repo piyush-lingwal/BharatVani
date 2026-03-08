@@ -1,11 +1,41 @@
 {
+    "id": "digital_india",
     "name": "Digital India",
+    "full_name": "Digital India Programme",
     "hindi_name": "डिजिटल इंडिया",
     "category": "digital",
-    "summary": "Free digital literacy training, BPO jobs in small towns, common service centers",
-    "hindi_summary": "Digital saksharta, computer training, aur CSC center ki suvidha",
-    "benefits": "Free digital literacy, DigiLocker for documents, UMANG app for government services",
-    "eligibility": "All Indian citizens",
+    "benefit": "Free digital literacy training, DigiLocker, UMANG app, BPO jobs in small towns, CSC services",
+    "benefit_hindi": "Muft digital saksharta training, DigiLocker, UMANG app, chote shaharon mein BPO naukri",
+    "eligibility": {
+        "description": "All Indian citizens eligible for digital literacy and services",
+        "description_hindi": "Sabhi Bharatiya naagrik digital saksharta aur sevaaon ke liye yogya hain",
+        "criteria": [
+            "Indian citizen",
+            "For PMGDISHA: One person per household who is not digitally literate",
+            "Age 14-60 years for PMGDISHA training"
+        ],
+        "exclusions": []
+    },
+    "documents_required": [
+        "Aadhaar Card",
+        "Mobile number",
+        "For DigiLocker: Aadhaar-linked mobile"
+    ],
+    "how_to_apply": {
+        "steps": [
+            "Visit nearest CSC (Common Service Centre) for digital literacy training",
+            "Download DigiLocker app or visit digilocker.gov.in for document storage",
+            "Download UMANG app for government services",
+            "Contact PMGDISHA center for free computer training"
+        ],
+        "steps_hindi": [
+            "Nearest CSC center jaayein digital training ke liye",
+            "DigiLocker app download karein documents ke liye",
+            "UMANG app download karein sarkari sevaaon ke liye",
+            "PMGDISHA center par muft computer training lein"
+        ]
+    },
     "helpline": "1800-111-555",
-    "website": "digitalindia.gov.in"
+    "website": "digitalindia.gov.in",
+    "hindi_summary": "Digital India mein muft computer training, DigiLocker mein documents safely rakhein, aur UMANG app se sarkari kaam karein. Nearest CSC center par jaake training le sakte hain."
 }

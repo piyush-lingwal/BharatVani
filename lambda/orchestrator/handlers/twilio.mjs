@@ -1,10 +1,57 @@
 /**
  * BharatVani — Twilio Voice Handler (Optimized)
  * Uses Twilio's built-in Polly TTS — no S3 upload needed
+ * Now uses the shared processUserQuery() pipeline for consistent responses
  */
 
-import { callBedrock } from '../utils/bedrock.mjs';
+import { processUserQuery } from '../utils/pipeline.mjs';
 import { createSession, getSession, updateSession } from '../utils/session.mjs';
+import { readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// Language to Voice Mapping
+const LANGUAGE_VOICES = {
+    'hi-IN': 'Polly.Aditi',
+    'en-IN': 'Polly.Raveena',
+    'ta-IN': 'Polly.Aditi',
+    'te-IN': 'Polly.Aditi',
+    'bn-IN': 'Polly.Aditi',
+    'mr-IN': 'Polly.Aditi'
+};
+
+const DTMF_TO_LANG = {
+    '1': 'hi-IN',
+    '2': 'en-IN',
+    '3': 'ta-IN',
+    '4': 'te-IN',
+    '5': 'bn-IN',
+    '6': 'mr-IN'
+};
+
+// Load messages — search multiple paths for compatibility
+let messages = null;
+function getMessages() {
+    if (messages) return messages;
+    const searchPaths = [
+        join(__dirname, '..', 'knowledge-base', 'system'),         // Lambda: handlers/../knowledge-base
+        join(__dirname, '..', '..', 'knowledge-base', 'system'),   // Local dev: handlers/../../knowledge-base
+        join(__dirname, '..', '..', '..', 'knowledge-base', 'system'), // Deep local
+        join('/var/task', 'knowledge-base', 'system')              // Lambda absolute
+    ];
+    for (const dir of searchPaths) {
+        try {
+            messages = JSON.parse(readFileSync(join(dir, 'welcome_messages.json'), 'utf8'));
+            console.log('Loaded messages from:', dir);
+            return messages;
+        } catch (e) { continue; }
+    }
+    console.warn('Could not load welcome_messages.json from any path');
+    messages = { welcome: {}, nudge: {}, goodbye: {} };
+    return messages;
+}
 
 // Expanded Hindi speech hints — rural vocabulary for better recognition
 const HINDI_HINTS = [
@@ -47,16 +94,20 @@ ${content}
 }
 
 /**
- * Build optimized <Gather> tag with Hindi settings
+ * Build optimized <Gather> tag with language settings
  */
-function gatherTag(sessionId, prompt) {
-    return `<Gather input="speech dtmf" language="hi-IN" speechTimeout="auto" timeout="8" action="/voice/gather?sessionId=${sessionId}" method="POST" hints="${HINDI_HINTS}" profanityFilter="false" enhanced="true">
-    <Say language="hi-IN" voice="Polly.Aditi">${prompt}</Say>
+function gatherTag(sessionId, prompt, language = 'hi-IN') {
+    const voice = LANGUAGE_VOICES[language] || 'Polly.Aditi';
+    // Only apply Hindi hints if language is Hindi
+    const hintsAttr = language === 'hi-IN' ? `hints="${HINDI_HINTS}" ` : '';
+
+    return `<Gather input="speech dtmf" language="${language}" speechTimeout="auto" timeout="8" action="/voice/gather?sessionId=${sessionId}" method="POST" ${hintsAttr}profanityFilter="false" enhanced="true">
+    <Say language="${language}" voice="${voice}">${prompt}</Say>
 </Gather>`;
 }
 
 /**
- * Handle incoming call — greet and listen
+ * Handle incoming call — prompt for language selection
  */
 export async function handleIncoming(params) {
     const phoneNumber = params.From || params.Caller || '+unknown';
@@ -66,13 +117,39 @@ export async function handleIncoming(params) {
     const { session } = await createSession(phoneNumber);
     const sessionId = session.session_id;
 
-    // Short, crisp welcome
-    const welcomeText = 'Namaste! BharatVani mein aapka swagat hai. Aap mujhse sarkari yojana, fasal ki keemat, ya kheti ke baare mein pooch sakte hain.';
+    // Ask for language selection
+    return twiml(`
+    <Gather numDigits="1" action="/voice/language?sessionId=${sessionId}" method="POST" timeout="10">
+        <Say language="hi-IN" voice="Polly.Aditi">Bharat Vani mein aapka swagat hai. Hindi ke liye 1 dabayein.</Say>
+        <Say language="en-IN" voice="Polly.Raveena">For English, press 2.</Say>
+        <Say language="ta-IN" voice="Polly.Aditi">Tamil aaha 3 azhuthavum.</Say>
+        <Say language="te-IN" voice="Polly.Aditi">Telugu kosam 4 nokkandi.</Say>
+        <Say language="bn-IN" voice="Polly.Aditi">Bangla janar jonno 5 chapun.</Say>
+        <Say language="mr-IN" voice="Polly.Aditi">Marathi sathi 6 dabba.</Say>
+    </Gather>
+    <Redirect method="POST">/voice/incoming</Redirect>
+`);
+}
+
+/**
+ * Handle language selection and play welcome message
+ */
+export async function handleLanguage(params, sessionId) {
+    const digits = params.Digits || '1';
+    const language = DTMF_TO_LANG[digits] || 'hi-IN';
+    const voice = LANGUAGE_VOICES[language];
+
+    console.log(`Language selected: ${language} for session ${sessionId}`);
+
+    // Update session
+    await updateSession(sessionId, { language: language });
+
+    const msgs = getMessages();
+    const welcomeText = msgs.welcome?.[language] || msgs.welcome?.['hi-IN'] || 'Namaste! Aap kya jaanna chahte hain?';
 
     return twiml(`
-    <Say language="hi-IN" voice="Polly.Aditi">${welcomeText}</Say>
-    ${gatherTag(sessionId, 'Boliye, main sun rahi hoon...')}
-    <Say language="hi-IN" voice="Polly.Aditi">Koi baat nahi. Aap kabhi bhi dobara call kar sakte hain. Dhanyavaad!</Say>
+    ${gatherTag(sessionId, welcomeText, language)}
+    <Say language="${language}" voice="${voice}">${msgs.goodbye?.[language] || 'Dhanyavaad!'}</Say>
 `);
 }
 
@@ -101,68 +178,71 @@ export async function handleGather(params, sessionId) {
         }
     }
 
+    const session = await getSession(sessionId);
+    const language = session?.language || 'hi-IN';
+    const voice = LANGUAGE_VOICES[language] || 'Polly.Aditi';
+    const msgs = getMessages();
+
     // If no speech detected
     if (!speechResult || speechResult.trim() === '') {
+        const nudgeText = msgs.nudge?.[language] || msgs.nudge?.['hi-IN'] || 'Kripya boliye.';
+        const goodbyeText = msgs.goodbye?.[language] || 'Dhanyavaad!';
         return twiml(`
-    ${gatherTag(sessionId, 'Maaf kijiye, mujhe sunai nahi diya. Kripya dobara boliye. Ya 1 dabaiye yojana ke liye, 2 dabaiye fasal keemat ke liye.')}
-    <Say language="hi-IN" voice="Polly.Aditi">Dhanyavaad! Dobara call karein.</Say>
+    ${gatherTag(sessionId, nudgeText, language)}
+    <Say language="${language}" voice="${voice}">${goodbyeText}</Say>
 `);
     }
 
     // Check for goodbye
-    const endWords = ['bye', 'goodbye', 'alvida', 'dhanyavaad', 'thank you', 'bas', 'band karo', 'rakhiye', 'khatam'];
+    const endWords = ['bye', 'goodbye', 'alvida', 'dhanyavaad', 'thank you', 'bas', 'band karo', 'rakhiye', 'khatam', 'nandri', 'malli kaluddam', 'abot biday'];
     if (endWords.some(w => speechResult.toLowerCase().includes(w))) {
+        const goodbyeText = msgs.goodbye?.[language] || 'Dhanyavaad!';
         return twiml(`
-    <Say language="hi-IN" voice="Polly.Aditi">Dhanyavaad! BharatVani ko use karne ke liye shukriya. Jai Hind!</Say>
+    <Say language="${language}" voice="${voice}">${goodbyeText}</Say>
     <Hangup/>
 `);
     }
 
-    return await processQuery(speechResult, sessionId, phoneNumber);
+    return await processQuery(speechResult, sessionId, phoneNumber, language);
 }
 
 /**
- * Process user query through Bedrock AI and return TwiML
+ * Process user query through the SHARED pipeline and return TwiML
+ * Now uses processUserQuery() — same Bedrock + intent routing + handlers as web chat
  */
-async function processQuery(userText, sessionId, phoneNumber) {
+async function processQuery(userText, sessionId, phoneNumber, language) {
+    const voice = LANGUAGE_VOICES[language] || 'Polly.Aditi';
+    const msgs = getMessages();
+    const nudgeText = msgs.nudge?.[language] || 'Aur samajhne ke liye boliye.';
+
     try {
-        // Get session history
-        let session = await getSession(sessionId);
-        const conversationHistory = session?.conversation_history || [];
+        // Use the shared processing pipeline — same as web chat
+        const result = await processUserQuery(userText, sessionId, phoneNumber);
+        const responseText = result.responseText || 'Maaf kijiye, mujhe samajh nahi aaya.';
 
-        // Call Bedrock AI
-        const aiResponse = await callBedrock(userText, conversationHistory, 'hi-IN');
-        const responseText = aiResponse.response_text || 'Maaf kijiye, mujhe samajh nahi aaya.';
-
-        console.log('AI Response:', responseText);
-
-        // Update session history (non-blocking)
-        if (session) {
-            const updatedHistory = [
-                ...conversationHistory,
-                { role: 'user', text: userText },
-                { role: 'assistant', text: responseText }
-            ].slice(-6); // Keep last 6 turns only
-
-            updateSession(sessionId, {
-                conversation_history: updatedHistory,
-                last_intent: aiResponse.intent,
-                turn_count: (session.turn_count || 0) + 1
-            }).catch(err => console.warn('Session update failed:', err.message));
+        // Handle end_call intent
+        if (result.isEndCall) {
+            const goodbyeText = msgs.goodbye?.[language] || 'Dhanyavaad!';
+            return twiml(`
+    <Say language="${language}" voice="${voice}">${escapeXml(goodbyeText)}</Say>
+    <Hangup/>
+`);
         }
 
-        // Respond using Twilio's built-in Polly TTS — NO S3 upload needed!
+        console.log('Twilio AI Response (via shared pipeline):', responseText.substring(0, 100));
+
+        // Respond using Twilio's built-in Polly TTS
         return twiml(`
-    <Say language="hi-IN" voice="Polly.Aditi">${escapeXml(responseText)}</Say>
-    ${gatherTag(sessionId, 'Aur kuch poochna hai? Boliye ya 1 dabaiye yojana, 2 dabaiye keemat ke liye.')}
-    <Say language="hi-IN" voice="Polly.Aditi">Dhanyavaad!</Say>
+    <Say language="${language}" voice="${voice}">${escapeXml(responseText)}</Say>
+    ${gatherTag(sessionId, nudgeText, language)}
+    <Say language="${language}" voice="${voice}">${msgs.goodbye?.[language] || 'Dhanyavaad!'}</Say>
 `);
 
     } catch (err) {
         console.error('Error processing query:', err);
         return twiml(`
-    <Say language="hi-IN" voice="Polly.Aditi">Maaf kijiye, kuch problem ho gayi.</Say>
-    ${gatherTag(sessionId, 'Kripya dobara boliye...')}
+    <Say language="${language}" voice="${voice}">Network problem. Please try again.</Say>
+    ${gatherTag(sessionId, nudgeText, language)}
 `);
     }
 }

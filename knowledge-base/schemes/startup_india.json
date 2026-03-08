@@ -1,11 +1,50 @@
 {
+    "id": "startup_india",
     "name": "Startup India",
+    "full_name": "Startup India Initiative",
     "hindi_name": "स्टार्टअप इंडिया",
     "category": "entrepreneurship",
-    "summary": "Government support for startups — tax benefits, easy registration, seed funding",
-    "hindi_summary": "Naye business ke liye tax chhoot, aasan registration, aur seed fund",
-    "benefits": "3-year tax exemption, self-certification for compliance, ₹10 lakh seed fund, IPR fast-track",
-    "eligibility": "Entity less than 10 years old, annual turnover under ₹100 crore, innovative product/service",
+    "benefit": "Tax exemption for 3 years, self-certification for 6 labour and 3 environmental laws, ₹10,000 crore Fund of Funds, fast-track patent filing",
+    "benefit_hindi": "3 saal tax chhoot, saraltata se compliance, Fund of Funds se paisa, tez patent filing",
+    "eligibility": {
+        "description": "Entity incorporated as private limited company, partnership firm, or LLP, working towards innovation and growth",
+        "description_hindi": "Private limited company, partnership firm, ya LLP jo innovation aur growth mein kaam kare",
+        "criteria": [
+            "Entity incorporated no more than 10 years ago",
+            "Annual turnover below ₹100 crore",
+            "Working towards innovation, development, or improvement of products/services",
+            "Not formed by splitting or restructuring an existing business"
+        ],
+        "exclusions": [
+            "Entities older than 10 years",
+            "Turnover above ₹100 crore",
+            "Restructured existing businesses"
+        ]
+    },
+    "documents_required": [
+        "Certificate of Incorporation",
+        "PAN of entity",
+        "Brief description of innovation",
+        "Aadhaar/ID of founders",
+        "Bank account of entity"
+    ],
+    "how_to_apply": {
+        "steps": [
+            "Register on startupindia.gov.in",
+            "Get DPIIT Recognition number",
+            "Apply for tax exemption through income tax portal",
+            "Apply for Fund of Funds through registered AIFs",
+            "Use self-certification for compliance"
+        ],
+        "steps_hindi": [
+            "startupindia.gov.in par register karein",
+            "DPIIT Recognition number lein",
+            "Income tax portal se tax chhoot ke liye apply karein",
+            "Fund of Funds ke liye registered AIF se sampark karein",
+            "Self-certification se compliance karein"
+        ]
+    },
     "helpline": "1800-115-565",
-    "website": "startupindia.gov.in"
+    "website": "startupindia.gov.in",
+    "hindi_summary": "Startup India mein naye business ko 3 saal tax chhoot, Fund of Funds se paisa, aur tez patent filing milti hai. startupindia.gov.in par register karein aur DPIIT Recognition lein."
 }

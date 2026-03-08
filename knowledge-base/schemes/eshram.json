@@ -1,11 +1,49 @@
 {
+    "id": "eshram",
     "name": "e-Shram Card",
+    "full_name": "e-Shram Portal - National Database of Unorganized Workers",
     "hindi_name": "ई-श्रम कार्ड",
     "category": "labor",
-    "summary": "National database for unorganized workers — insurance and scheme benefits",
-    "hindi_summary": "Asangathit kshetra ke mazdooron ka panjikaran — bima aur yojana ka labh",
-    "benefits": "₹2 lakh accidental insurance, access to government schemes, UAN number",
-    "eligibility": "Unorganized workers — construction, domestic, agriculture, street vendors, gig workers",
+    "benefit": "₹2 lakh accidental insurance, access to government scheme benefits, UAN number for tracking",
+    "benefit_hindi": "₹2 lakh ka durghatna bima, sarkari yojana ka labh, UAN number",
+    "eligibility": {
+        "description": "Unorganized workers aged 16-59 years who are not members of EPFO/ESIC",
+        "description_hindi": "16-59 saal ke asangathit kshetra ke mazdoor jo EPFO/ESIC mein nahi hain",
+        "criteria": [
+            "Age 16-59 years",
+            "Unorganized worker (construction, domestic, agriculture, street vendor, gig worker etc.)",
+            "Not a member of EPFO or ESIC",
+            "Monthly income below ₹15,000"
+        ],
+        "exclusions": [
+            "EPFO/ESIC members",
+            "Income tax payers",
+            "Age below 16 or above 59"
+        ]
+    },
+    "documents_required": [
+        "Aadhaar Card",
+        "Aadhaar-linked mobile number",
+        "Bank account details",
+        "Passport size photo"
+    ],
+    "how_to_apply": {
+        "steps": [
+            "Visit eshram.gov.in or nearest CSC center",
+            "Enter Aadhaar number and verify with OTP",
+            "Fill personal, address, occupation details",
+            "Upload photo and bank details",
+            "Download e-Shram card with UAN number"
+        ],
+        "steps_hindi": [
+            "eshram.gov.in ya nearest CSC center jaayein",
+            "Aadhaar number daalein aur OTP se verify karein",
+            "Apni jaankari, pata, aur kaam ki details bharein",
+            "Photo aur bank details dalein",
+            "e-Shram card UAN number ke saath download karein"
+        ]
+    },
     "helpline": "14434",
-    "website": "eshram.gov.in"
+    "website": "eshram.gov.in",
+    "hindi_summary": "e-Shram Card se asangathit kshetra ke mazdooron ko 2 lakh rupaye ka durghatna bima milta hai. Aadhaar card se online register karein ya CSC center jaayein. Helpline 14434 par call karein."
 }

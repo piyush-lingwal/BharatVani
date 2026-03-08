@@ -21,3 +21,11 @@ Thumbs.db
 
 # SAM build
 packaged.yaml
+deploy.zip
+
+# Removed legacy web folder
+web/
+
+# Frontend build output
+frontend/dist/
+frontend/dist.zip

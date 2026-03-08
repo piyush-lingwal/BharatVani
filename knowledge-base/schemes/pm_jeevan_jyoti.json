@@ -1,11 +1,48 @@
 {
+    "id": "pm_jeevan_jyoti",
     "name": "PM Jeevan Jyoti Bima Yojana",
+    "full_name": "Pradhan Mantri Jeevan Jyoti Bima Yojana",
     "hindi_name": "प्रधानमंत्री जीवन ज्योति बीमा योजना",
     "category": "insurance",
-    "summary": "Life insurance ₹2 lakh cover for just ₹436 per year",
-    "hindi_summary": "Sirf 436 rupaye saal mein 2 lakh ka jeevan bima",
-    "benefits": "₹2 lakh life insurance cover, auto-debit from bank account, ₹436/year premium",
-    "eligibility": "Age 18-50 years, savings bank account holder",
+    "benefit": "₹2 lakh life insurance cover at just ₹436/year premium",
+    "benefit_hindi": "Sirf ₹436 saalana mein ₹2 lakh ka jeevan bima",
+    "eligibility": {
+        "description": "Any Indian citizen aged 18-50 years with a bank account",
+        "description_hindi": "18-50 saal ka koi bhi Bharatiya naagrik jiske paas bank account ho",
+        "criteria": [
+            "Age 18-50 years",
+            "Must have savings bank account",
+            "Must give consent for auto-debit of premium",
+            "Aadhaar linked to bank account"
+        ],
+        "exclusions": [
+            "Age above 50 or below 18",
+            "No bank account"
+        ]
+    },
+    "documents_required": [
+        "Aadhaar Card",
+        "Bank account",
+        "Nominee details",
+        "Age proof"
+    ],
+    "how_to_apply": {
+        "steps": [
+            "Visit your bank branch",
+            "Fill PMJJBY application form",
+            "Give consent for auto-debit of ₹436/year",
+            "Premium automatically deducted from account",
+            "Coverage renewed annually"
+        ],
+        "steps_hindi": [
+            "Apne bank ki branch mein jaayein",
+            "PMJJBY form bharein",
+            "₹436 saalana auto-debit ki consent dein",
+            "Premium bank account se kat jaayega",
+            "Har saal coverage renew hota hai"
+        ]
+    },
     "helpline": "1800-180-1111",
-    "website": "jansuraksha.gov.in"
+    "website": "jansuraksha.gov.in",
+    "hindi_summary": "PM Jeevan Jyoti Bima mein sirf 436 rupaye saalana mein 2 lakh rupaye ka jeevan bima milta hai. Bank jaayein aur form bharein. 18 se 50 saal ke koi bhi vyakti le sakta hai."
 }

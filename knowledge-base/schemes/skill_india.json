@@ -1,11 +1,50 @@
 {
-    "name": "Skill India Mission (PMKVY)",
-    "hindi_name": "प्रधानमंत्री कौशल विकास योजना",
-    "category": "education_skill",
-    "summary": "Free skill training and certification for youth with placement support",
-    "hindi_summary": "Yuvaon ko muft skill training aur certificate, naukri mein madad",
-    "benefits": "Free training, certification, ₹8,000 reward on completion, placement assistance",
-    "eligibility": "Indian citizen, Class 10/12 dropout or graduate seeking skills",
-    "helpline": "1800-123-9626",
-    "website": "pmkvyofficial.org"
+    "id": "skill_india",
+    "name": "Skill India Mission",
+    "full_name": "Skill India Mission - PMKVY & NSDC",
+    "hindi_name": "स्किल इंडिया मिशन",
+    "category": "skill_development",
+    "benefit": "Free skill training in 300+ trades, government certification, placement support, ₹8,000 reward on certification",
+    "benefit_hindi": "300+ trades mein muft training, sarkari certificate, naukri mein madad, ₹8,000 inaam",
+    "eligibility": {
+        "description": "Any Indian citizen aged 15-45 years, school dropouts and unemployed youth",
+        "description_hindi": "15-45 saal ka koi bhi Bharatiya naagrik, school chhodne wale ya berozgaar nojawan",
+        "criteria": [
+            "Age 15-45 years",
+            "Indian citizen",
+            "No minimum education requirement for most courses",
+            "Aadhaar card mandatory"
+        ],
+        "exclusions": [
+            "Already enrolled in another government skill program"
+        ]
+    },
+    "documents_required": [
+        "Aadhaar Card",
+        "Bank account details",
+        "Mobile number",
+        "Passport size photo",
+        "Education certificate (if available)"
+    ],
+    "how_to_apply": {
+        "steps": [
+            "Visit skillindia.nsdcindia.org or nearest PMKVY training center",
+            "Search for courses and training centers near you",
+            "Register with Aadhaar and mobile number",
+            "Attend training (usually 2-6 months)",
+            "Appear for assessment exam",
+            "On passing, receive certificate and ₹8,000 reward"
+        ],
+        "steps_hindi": [
+            "skillindia.nsdcindia.org ya nearest PMKVY training center jaayein",
+            "Apne pass ke courses aur training center dhundhein",
+            "Aadhaar aur mobile se register karein",
+            "Training lein (aam taur par 2-6 mahine)",
+            "Assessment exam dein",
+            "Pass hone par certificate aur ₹8,000 inaam milega"
+        ]
+    },
+    "helpline": "1800-123-9626 (NSDC)",
+    "website": "skillindia.nsdcindia.org",
+    "hindi_summary": "Skill India mein muft training milti hai 300 se zyada trades mein — electrician, plumber, computer, beauty parlor, sab kuch. Certificate milta hai aur naukri lagwaane mein madad hoti hai. Pass hone par 8000 rupaye bhi milte hain."
 }

@@ -1,11 +1,48 @@
 {
+    "id": "pm_matru_vandana",
     "name": "PM Matru Vandana Yojana",
+    "full_name": "Pradhan Mantri Matru Vandana Yojana",
     "hindi_name": "प्रधानमंत्री मातृ वंदना योजना",
     "category": "women_child",
-    "summary": "₹11,000 cash benefit to pregnant women and nursing mothers",
-    "hindi_summary": "Garbhvati mahilaon ko 11,000 rupaye ki madad teen kiston mein",
-    "benefits": "₹11,000 in installments for first child, nutrition support, institutional delivery incentive",
-    "eligibility": "Pregnant women and lactating mothers for first living child, age 19+",
-    "helpline": "181",
-    "website": "pmmvy.wcd.gov.in"
+    "benefit": "₹5,000 cash benefit for first living child, ₹6,000 for second (if girl child)",
+    "benefit_hindi": "Pehle bacche par ₹5,000 aur doosri beti par ₹6,000 ki madad",
+    "eligibility": {
+        "description": "Pregnant and lactating mothers for first two live births",
+        "description_hindi": "Garbhvati aur stanpaan karaane wali maataon ko pehle do bachche ke liye",
+        "criteria": [
+            "Pregnant women and lactating mothers",
+            "First two live births",
+            "Age 19 years and above",
+            "Not receiving similar benefit from any other scheme"
+        ],
+        "exclusions": [
+            "Women in government/PSU employment",
+            "Third or subsequent birth"
+        ]
+    },
+    "documents_required": [
+        "Aadhaar Card of mother",
+        "Bank account details",
+        "MCP (Mother and Child Protection) Card",
+        "Pregnancy registration certificate"
+    ],
+    "how_to_apply": {
+        "steps": [
+            "Register pregnancy at Anganwadi Centre or health facility",
+            "Get MCP Card",
+            "Fill PMMVY application form at Anganwadi Centre",
+            "Submit Aadhaar and bank details",
+            "Amount credited in 3 installments"
+        ],
+        "steps_hindi": [
+            "Anganwadi Centre ya health center mein pregnancy register karaayein",
+            "MCP Card banwaayein",
+            "Anganwadi Centre par PMMVY form bharein",
+            "Aadhaar aur bank details dein",
+            "Paisa 3 kiston mein bank mein aayega"
+        ]
+    },
+    "helpline": "181 / 7998799804",
+    "website": "wcd.nic.in",
+    "hindi_summary": "PM Matru Vandana Yojana mein garbhvati mahilaon ko pehle bacche par 5000 rupaye aur doosri beti par 6000 rupaye milte hain. Anganwadi Centre mein form bharein. Helpline 181 par call karein."
 }

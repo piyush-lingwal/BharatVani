@@ -249,14 +249,42 @@ export async function callBedrock(userText, conversationHistory = [], language =
         const response = await withRetry(() => bedrockClient.send(command));
         const responseBody = JSON.parse(new TextDecoder().decode(response.body));
 
-        // Get plain text response — no JSON parsing needed
+        // Get plain text response
         const textContent = responseBody.content?.[0]?.text || '';
         console.log('Bedrock raw response:', textContent);
 
-        // Return simple response object
+        // Parse intent tag from Claude's response: [INTENT:xxx]
+        const intentMatch = textContent.match(/^\[INTENT:(\w+)\]/);
+        const intent = intentMatch ? intentMatch[1] : 'general';
+
+        // Parse entity tags: [SCHEME:name] [CROP:name] [CITY:name]
+        const schemeMatch = textContent.match(/\[SCHEME:([^\]]+)\]/);
+        const cropMatch = textContent.match(/\[CROP:([^\]]+)\]/);
+        const cityMatch = textContent.match(/\[CITY:([^\]]+)\]/);
+        const queryTypeMatch = textContent.match(/\[QTYPE:([^\]]+)\]/);
+
+        // Strip all tags from the response text
+        const cleanText = textContent
+            .replace(/\[INTENT:\w+\]/g, '')
+            .replace(/\[SCHEME:[^\]]+\]/g, '')
+            .replace(/\[CROP:[^\]]+\]/g, '')
+            .replace(/\[CITY:[^\]]+\]/g, '')
+            .replace(/\[QTYPE:[^\]]+\]/g, '')
+            .trim();
+
+        console.log('Parsed intent:', intent, '| scheme:', schemeMatch?.[1], '| crop:', cropMatch?.[1]);
+
+        // Build entities object
+        const entities = {};
+        if (schemeMatch) entities.scheme_name = schemeMatch[1];
+        if (cropMatch) entities.crop_name = cropMatch[1];
+        if (cityMatch) entities.city = cityMatch[1];
+        if (queryTypeMatch) entities.query_type = queryTypeMatch[1];
+
         return {
-            intent: 'general',
-            response_text: textContent.trim() || 'Maaf kijiye, kripya dobara boliye.',
+            intent: intent,
+            response_text: cleanText || 'Maaf kijiye, kripya dobara boliye.',
+            entities: entities,
             follow_up: null,
             sms_content: null
         };

@@ -1,18 +1,34 @@
 {
     "welcome": {
         "hi-IN": "Namaste! BharatVani mein aapka swagat hai. Aap kya jaanna chahte hain?",
-        "en-IN": "Namaste! Welcome to BharatVani. How can I help you today?"
+        "en-IN": "Namaste! Welcome to BharatVani. How can I help you today?",
+        "ta-IN": "Vanakkam! BharatVani ku ungalai varaverkirom. Naan eppadi udhava mudiyum?",
+        "te-IN": "Namaskaram! BharatVani ki swagatham. Nenu miku ela sahayam cheyagalanu?",
+        "bn-IN": "Namaskar! BharatVani-te apnake swagoto. Ami apnake kibhabe sahajyo korte pari?",
+        "mr-IN": "Namaskar! BharatVani madhye aaple swagat aahe. Mi tujhi kashi madat karu shakto?"
     },
     "welcome_returning": {
         "hi-IN": "Namaste! BharatVani mein phir se swagat hai. Aaj kya madad karoon?",
-        "en-IN": "Welcome back to BharatVani! How can I help you today?"
+        "en-IN": "Welcome back to BharatVani! How can I help you today?",
+        "ta-IN": "Meendum Vanakkam! Inru naan eppadi udhava mudiyum?",
+        "te-IN": "Malli swagatham! Iroju nenu miku ela sahayam cheyagalanu?",
+        "bn-IN": "Abar swagoto! Aaj ami apnake kibhabe sahajyo korte pari?",
+        "mr-IN": "Punha swagat aahe! Aaj mi tujhi kashi madat karu shakto?"
     },
     "nudge": {
         "hi-IN": "Kya aap kuch poochna chahte hain? Main sun raha hoon.",
-        "en-IN": "Would you like to ask something? I'm listening."
+        "en-IN": "Would you like to ask something? I'm listening.",
+        "ta-IN": "Neengal ethavathu ketka virumbugirirgala? Naan ketkondirukkiren.",
+        "te-IN": "Miru emaina adagalnukuntunnara? Nenu vintunnanu.",
+        "bn-IN": "Apni ki kichu jiggasha korte chan? Ami shunchi.",
+        "mr-IN": "Tumhala kahi vicharaycha aahe ka? Mi aikat aahe."
     },
     "goodbye": {
         "hi-IN": "Shukriya! BharatVani har samay aapki seva mein hai. Dobara call karein!",
-        "en-IN": "Thank you! BharatVani is always here to help. Call again anytime!"
+        "en-IN": "Thank you! BharatVani is always here to help. Call again anytime!",
+        "ta-IN": "Nandri! BharatVani eppodhum udhava thayaragavullathu. Meendum azhaikkavum!",
+        "te-IN": "Dhanyavadalu! BharatVani eppudu miku sahayam cheyadaniki siddhamga undi. Malli call cheyandi!",
+        "bn-IN": "Dhonnobad! BharatVani shob shomoy apnar sathe ache. Abar call korben!",
+        "mr-IN": "Dhanyavad! BharatVani nehemi tumchya madatisathi aahe. Punha call kara!"
     }
 }

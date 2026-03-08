@@ -147,32 +147,40 @@ export function detectLiveDataNeed(userText) {
     const text = userText.toLowerCase();
     const needs = [];
 
-    // Weather keywords — Latin + Devanagari (speech recognition returns Devanagari for hi-IN)
+    // Weather keywords — Multi-lingual (Hindi, English, Tamil, Telugu, Bengali, Marathi)
     const weatherWords = [
+        // Hindi/Urdu/Devanagari
         'mausam', 'weather', 'thand', 'garmi', 'barish', 'baarish', 'taapmaan',
         'temperature', 'dhoop', 'kohra', 'fog', 'hawa', 'toofan', 'aandhi',
         'मौसम', 'बारिश', 'बरसात', 'ठंड', 'गर्मी', 'तापमान', 'धूप',
-        'कोहरा', 'हवा', 'तूफान', 'आंधी', 'बर्फ', 'ओले'
+        'कोहरा', 'हवा', 'तूफान', 'आंधी', 'बर्फ', 'ओले',
+        // Regional: Tamil (Vaanilai, mazhai), Telugu (Vatavaranam, varsham), Bengali (Abohawa, brishti), Marathi (Havamana, paaus)
+        'vaanilai', 'mazhai', 'veiyil', 'vaatavaranam', 'vatavaranam', 'varsham',
+        'abohawa', 'brishti', 'havamana', 'paaus', 'tapman'
     ];
     if (weatherWords.some(w => text.includes(w) || userText.includes(w))) {
         const city = extractCity(userText);
         needs.push({ type: 'weather', city });
     }
 
-    // News keywords — Latin + Devanagari
+    // News keywords — Multi-lingual
     const newsWords = [
         'khabar', 'news', 'samachar', 'taza khabar', 'headline', 'aaj ki khabar',
         'kya chal raha', 'kya ho raha', 'current affairs',
-        'खबर', 'खबरें', 'समाचार', 'ताजा खबर', 'आज की खबर', 'न्यूज़', 'न्यूज'
+        'खबर', 'खबरें', 'समाचार', 'ताजा खबर', 'आज की खबर', 'न्यूज़', 'न्यूज',
+        // Regional: Tamil (Seithigal), Telugu (Vaarthalu), Bengali (Khobor), Marathi (Batmya)
+        'seithigal', 'seythigal', 'vaarthalu', 'vartalu', 'khobor', 'batmya', 'batamy'
     ];
     if (newsWords.some(w => text.includes(w) || userText.includes(w))) {
         needs.push({ type: 'news' });
     }
 
-    // Gold/silver keywords — Latin + Devanagari
+    // Gold/silver keywords — Multi-lingual
     const goldWords = [
         'sone', 'sona', 'gold', 'chandi', 'silver', 'bhav', 'sone ka dam',
-        'सोना', 'सोने', 'चांदी', 'सोने का भाव', 'सोने की कीमत', 'गोल्ड'
+        'सोना', 'सोने', 'चांदी', 'सोने का भाव', 'सोने की कीमत', 'गोल्ड',
+        // Regional: Tamil (Thangam, Velli), Telugu (Bangaram, Vendi), Bengali (Shona, Rupa), Marathi (Sona, Chandi)
+        'thangam', 'velli', 'bangaram', 'vendi', 'shona', 'rupa'
     ];
     if (goldWords.some(w => text.includes(w) || userText.includes(w))
         && !text.includes('fasal') && !text.includes('gehu')

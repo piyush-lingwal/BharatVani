@@ -1,11 +1,46 @@
 {
+    "id": "swachh_bharat",
     "name": "Swachh Bharat Mission",
+    "full_name": "Swachh Bharat Mission - Gramin & Urban",
     "hindi_name": "स्वच्छ भारत मिशन",
     "category": "sanitation",
-    "summary": "Free toilet construction and sanitation improvement for rural and urban India",
-    "hindi_summary": "Shauchalay nirman aur swachhta ke liye yojana",
-    "benefits": "Free toilet construction (₹12,000 assistance), clean India campaign",
-    "eligibility": "BPL families, households without toilets",
-    "helpline": "1800-11-1111",
-    "website": "swachhbharatmission.gov.in"
+    "benefit": "₹12,000 for toilet construction (rural), community toilets and waste management (urban), ODF status",
+    "benefit_hindi": "Shauchalay banwane ke liye ₹12,000 ki madad (gaon mein), sheher mein samudayik shauchalay",
+    "eligibility": {
+        "description": "Rural households without toilets (Gramin) and urban areas for sanitation infrastructure",
+        "description_hindi": "Gaon ke woh ghar jinmein shauchalay nahi hai, aur sheher mein safai ki suvidha",
+        "criteria": [
+            "Rural household without a toilet (for individual household latrine)",
+            "BPL/SC/ST/marginal farmer households get priority",
+            "Urban: municipalities for community and public toilets"
+        ],
+        "exclusions": [
+            "Households that already have a functional toilet"
+        ]
+    },
+    "documents_required": [
+        "Aadhaar Card",
+        "BPL/ration card (if applicable)",
+        "Bank account details",
+        "Photo of construction site (before and after)"
+    ],
+    "how_to_apply": {
+        "steps": [
+            "Contact Gram Panchayat or Block Development Office",
+            "Apply for Individual Household Latrine (IHHL) subsidy",
+            "After approval, construct toilet",
+            "Take photo before and after construction",
+            "₹12,000 subsidy credited to bank account after verification"
+        ],
+        "steps_hindi": [
+            "Gram Panchayat ya Block Development Office se sampark karein",
+            "Shauchalay ke liye subsidy ka application dein",
+            "Manzuri ke baad shauchalay banwaayein",
+            "Banwane se pehle aur baad ki photo lein",
+            "Jaanch ke baad ₹12,000 bank account mein aayenge"
+        ]
+    },
+    "helpline": "1800-180-0404",
+    "website": "swachhbharatmission.gov.in",
+    "hindi_summary": "Swachh Bharat Mission mein gaon mein shauchalay banwane ke liye 12000 rupaye ki madad milti hai. Gram Panchayat mein application dein — subsidy bank account mein aayegi. Helpline 1800-180-0404."
 }

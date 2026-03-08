@@ -132,21 +132,13 @@ function handleCropPrice(entities) {
  * Handle weather queries (mock for hackathon)
  */
 function handleWeather(entities) {
-    const city = entities?.city || 'Patna';
+    const city = entities?.city || 'Delhi';
 
-    // Mock weather data for demo
-    const mockWeather = {
-        'Patna': { temp_min: 18, temp_max: 32, condition: 'Halki dhoop, badal chhaye', rain_chance: 20 },
-        'Delhi': { temp_min: 12, temp_max: 28, condition: 'Saaf mausam', rain_chance: 5 },
-        'Mumbai': { temp_min: 22, temp_max: 33, condition: 'Umass bhari garmi', rain_chance: 10 },
-        'Lucknow': { temp_min: 15, temp_max: 30, condition: 'Halki dhund subah', rain_chance: 15 },
-        'Jaipur': { temp_min: 14, temp_max: 31, condition: 'Saaf mausam, tez dhoop', rain_chance: 0 }
-    };
-
-    const weather = mockWeather[city] || mockWeather['Patna'];
-
+    // Real weather data is fetched by apiServices.mjs detectLiveDataNeed() and injected
+    // into Claude's context BEFORE this handler runs. Claude's response already contains
+    // accurate live weather. This handler returns a fallback only if the live pipeline missed it.
     return {
-        response_text: `${city} mein kal: ${weather.condition}. Temperature ${weather.temp_min} se ${weather.temp_max} degree. Barish ka ${weather.rain_chance}% chance hai.`,
+        response_text: `${city} ke mausam ki jaankari live data se mil rahi hai. Kuch aur poochna hai?`,
         sms_content: null,
         next_state: 'listening'
     };

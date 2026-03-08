@@ -12,7 +12,7 @@
 graph TB
     subgraph "User Layer"
         U["📱 Any Phone (via Twilio)"]
-        W["🌐 Browser (call.html / chat.html)"]
+        W["🌐 Frontend (React on Amplify)"]
     end
 
     subgraph "Voice Ingress"
@@ -274,16 +274,21 @@ knowledge-base/
 
 ---
 
-## 11. Web Frontend
+## 11. Frontend (Landing Page + Live Demo)
 
-**Location:** `web/`
+**Location:** `frontend/` — React + Vite SPA, deployed to **AWS Amplify**
 
-| File | Purpose |
+**Live URL:** [https://main.d82rgzguc9ef8.amplifyapp.com](https://main.d82rgzguc9ef8.amplifyapp.com)
+
+| Component | Purpose |
 |---|---|
-| `call.html` | Browser voice call UI — uses Web Speech API for STT + SpeechSynthesis for TTS |
-| `chat.html` | Text chat interface for testing |
+| `Hero.jsx` | Animated taglines, 3-phone mockup, interactive toll-free number CTA |
+| `Demo.jsx` | **Live AI chat** — Web Speech API (STT) + `/chat` endpoint + browser TTS |
+| `LanguageContext.jsx` | i18n translations for 6 languages (EN, HI, TA, MR, TE, BN) |
+| `Capabilities.jsx` | Feature cards with animations |
+| `Architecture.jsx` | System architecture visualization |
 
-**call.html TTS fix:** Long responses are split into sentence chunks for `SpeechSynthesisUtterance` to prevent browser truncation.
+**Demo.jsx TTS fix:** Long responses are split into sentence chunks for `SpeechSynthesisUtterance` to prevent browser truncation.
 
 ---
 

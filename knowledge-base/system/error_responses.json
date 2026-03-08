@@ -1,34 +1,66 @@
 {
     "speech_not_understood": {
         "hi-IN": "Maaf kijiye, samajh nahi aaya. Kripya dobara bataiye.",
-        "en-IN": "Sorry, I didn't catch that. Could you please repeat?"
+        "en-IN": "Sorry, I didn't catch that. Could you please repeat?",
+        "ta-IN": "Mannikkavum, puriyavillai. Thayavu seidhu meendum sollungal.",
+        "te-IN": "Kshaminchandi, artham kaledu. Dayachesi malli cheppandi.",
+        "bn-IN": "Khoma korben, bujhte parini. Doya kore abar bolun.",
+        "mr-IN": "Kshamasva, samajle nahi. Krupaya punha sanga."
     },
     "service_unavailable": {
         "hi-IN": "Abhi ye service available nahi hai. Kripya thodi der baad try karein.",
-        "en-IN": "This service is currently unavailable. Please try again shortly."
+        "en-IN": "This service is currently unavailable. Please try again shortly.",
+        "ta-IN": "Indha sevai ippodhu kidaikkavillai. Siridhu neram kazhithu muyarchikkavum.",
+        "te-IN": "Ee seva prastutam andubatulo ledu. Konchem sepu tarvatah malli prayatninchandi.",
+        "bn-IN": "Ei sheba ekhon pawa jachche na. Kichukhon por abar chesta korun.",
+        "mr-IN": "Hi seva sadhya uplabdh nahi. Krupaya thodya velane punha prayatna kara."
     },
     "otp_sent": {
         "hi-IN": "Aapke phone par OTP bheja gaya hai. Kripya OTP bataiye.",
-        "en-IN": "An OTP has been sent to your phone. Please tell me the OTP."
+        "en-IN": "An OTP has been sent to your phone. Please tell me the OTP.",
+        "ta-IN": "Ungal tholaipesikku OTP anuppappattullathu. Thayavu seidhu OTP ai sollungal.",
+        "te-IN": "Mi phonela OTP pampabidindhi. Dayachesi OTP cheppandi.",
+        "bn-IN": "Apnar phone a OTP pathano hoyeche. Doya kore OTP bolun.",
+        "mr-IN": "Tumchya phone var OTP pathavla aahe. Krupaya OTP sanga."
     },
     "otp_wrong": {
         "hi-IN": "Ye OTP galat hai. Kripya dobara bataiye.",
-        "en-IN": "That OTP is incorrect. Please try again."
+        "en-IN": "That OTP is incorrect. Please try again.",
+        "ta-IN": "Andha OTP thavarana. Thayavu seidhu meendum muyarchikkavum.",
+        "te-IN": "Aa OTP tappu. Dayachesi malli prayatninchandi.",
+        "bn-IN": "Oi OTP ti bhul. Doya kore abar chesta korun.",
+        "mr-IN": "Te OTP chukiche aahe. Krupaya punha prayatna kara."
     },
     "otp_expired": {
         "hi-IN": "OTP expire ho gaya hai. Kya naya OTP bhejein?",
-        "en-IN": "Your OTP has expired. Shall I send a new one?"
+        "en-IN": "Your OTP has expired. Shall I send a new one?",
+        "ta-IN": "Ungal OTP kaalavadhi aagi vittathu. Pudhiya OTP ai anuppattuma?",
+        "te-IN": "Mi OTP expire ayindi. Nenu kotha OTP pampamantara?",
+        "bn-IN": "Apnar OTP meyad uttirno hoyeche. Ami ki notun OTP pathabo?",
+        "mr-IN": "Tumche OTP expire zale aahe. Navin OTP pathavu ka?"
     },
     "otp_max_attempts": {
         "hi-IN": "Bahut zyada galat attempts ho gaye. Kripya baad mein call karein.",
-        "en-IN": "Too many incorrect attempts. Please call back later."
+        "en-IN": "Too many incorrect attempts. Please call back later.",
+        "ta-IN": "Migavum thavarana muyarchigal. Pinnar azhaikkavum.",
+        "te-IN": "Chala tappu prayatnalu. Tarvatah call cheyandi.",
+        "bn-IN": "Anek bhul chesta. Pore call korun.",
+        "mr-IN": "Khuup chukiche prayatna zale. Krupaya nantar call kara."
     },
     "general_error": {
         "hi-IN": "Kuch gadbad ho gayi. Kripya thodi der baad dobara call karein.",
-        "en-IN": "Something went wrong. Please call back in a few minutes."
+        "en-IN": "Something went wrong. Please call back in a few minutes.",
+        "ta-IN": "Etho thavaru nadanthathu. Siridhu neram kazhithu meendum azhaikkavum.",
+        "te-IN": "Edo tappu jarigindi. Konchem sepu tarvatah malli call cheyandi.",
+        "bn-IN": "Kichu shomossha hoyeche. Kichukhon por abar call korun.",
+        "mr-IN": "Kahi tari chukle aahe. Krupaya thodya velane punha call kara."
     },
     "timeout": {
         "hi-IN": "Lagta hai aap busy hain. Aap kisi bhi samay dobara call kar sakte hain. Dhanyavaad!",
-        "en-IN": "It seems you're busy. You can call back anytime. Thank you!"
+        "en-IN": "It seems you're busy. You can call back anytime. Thank you!",
+        "ta-IN": "Neengal busy aga irukkeergal ena thondrugirathu. Neengal eppodhu vendumanalum meendum azhaikkalam. Nandri!",
+        "te-IN": "Miru busy ga unnatlu undi. Miru eppudaina malli call cheyavochu. Dhanyavadalu!",
+        "bn-IN": "Mone hochche apni basto achen. Apni jekono shomoy abar call korte paren. Dhonnobad!",
+        "mr-IN": "Asa distay ki tumhi vyast aahat. Tumhi kadhihi punha call karu shakta. Dhanyavad!"
     }
 }

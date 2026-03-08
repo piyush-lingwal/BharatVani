@@ -1,11 +1,45 @@
 {
+    "id": "pm_suraksha_bima",
     "name": "PM Suraksha Bima Yojana",
+    "full_name": "Pradhan Mantri Suraksha Bima Yojana",
     "hindi_name": "प्रधानमंत्री सुरक्षा बीमा योजना",
     "category": "insurance",
-    "summary": "Accident insurance ₹2 lakh cover for just ₹20 per year",
-    "hindi_summary": "Sirf 20 rupaye saal mein 2 lakh ka durghatna bima",
-    "benefits": "₹2 lakh accidental death/disability cover, ₹20/year premium",
-    "eligibility": "Age 18-70 years, savings bank account holder",
+    "benefit": "₹2 lakh accidental death/disability cover at just ₹20/year (less than ₹2/month)",
+    "benefit_hindi": "Sirf ₹20 saalana mein ₹2 lakh ka durghatna bima",
+    "eligibility": {
+        "description": "Any Indian citizen aged 18-70 years with a bank account",
+        "description_hindi": "18-70 saal ka koi bhi Bharatiya naagrik jiske paas bank account ho",
+        "criteria": [
+            "Age 18-70 years",
+            "Must have savings bank account",
+            "Consent for auto-debit of ₹20/year premium"
+        ],
+        "exclusions": [
+            "Age above 70 or below 18"
+        ]
+    },
+    "documents_required": [
+        "Aadhaar Card",
+        "Bank account",
+        "Nominee details"
+    ],
+    "how_to_apply": {
+        "steps": [
+            "Visit your bank branch",
+            "Fill PMSBY application form",
+            "Give consent for auto-debit of ₹20/year",
+            "Premium deducted annually from account",
+            "In case of accident, nominee contacts bank for claim"
+        ],
+        "steps_hindi": [
+            "Apne bank ki branch mein jaayein",
+            "PMSBY form bharein",
+            "₹20 saalana auto-debit ki consent dein",
+            "Premium bank account se kat jaayega",
+            "Durghatna hone par nominee bank se claim kare"
+        ]
+    },
     "helpline": "1800-180-1111",
-    "website": "jansuraksha.gov.in"
+    "website": "jansuraksha.gov.in",
+    "hindi_summary": "PM Suraksha Bima mein sirf 20 rupaye saalana mein 2 lakh rupaye ka durghatna bima milta hai. Bank jaayein aur form bharein. Ye sabse sasta bima hai — mahine ka 2 rupaye se bhi kam!"
 }

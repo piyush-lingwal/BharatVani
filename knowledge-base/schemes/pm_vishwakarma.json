@@ -1,11 +1,52 @@
 {
+    "id": "pm_vishwakarma",
     "name": "PM Vishwakarma Yojana",
-    "hindi_name": "पीएम विश्वकर्मा योजना",
-    "category": "artisan_craftsmen",
-    "summary": "Support for traditional artisans and craftsmen — training, tools, and loans",
-    "hindi_summary": "Paramparik karigar aur shilpkaron ko training, auzaar, aur loan ki suvidha",
-    "benefits": "Free skill training, ₹15,000 toolkit, loan up to ₹3 lakh at 5%, PM Vishwakarma certificate",
-    "eligibility": "Traditional artisans — lohar, kumhar, sunar, darzi, nai, mali, etc.",
-    "helpline": "1800-599-0099",
-    "website": "pmvishwakarma.gov.in"
+    "full_name": "Pradhan Mantri Vishwakarma Yojana",
+    "hindi_name": "प्रधानमंत्री विश्वकर्मा योजना",
+    "category": "livelihood",
+    "benefit": "Collateral-free loan up to ₹3 lakh, 5% interest, free skill training and toolkit",
+    "benefit_hindi": "₹3 lakh tak bina guarantee ka loan, 5% byaaj, muft training aur toolkit",
+    "eligibility": {
+        "description": "Traditional artisans and craftspeople working with their hands in 18 identified trades",
+        "description_hindi": "Haath se kaam karne wale paramparik kaarigar — 18 pehchaan kiye gaye vyavsaay",
+        "criteria": [
+            "Traditional artisan/craftsperson in one of 18 trades",
+            "Trades include: carpenter, blacksmith, goldsmith, potter, weaver, cobbler, barber, washerman, tailor, fishnet maker, toy maker, etc.",
+            "Age 18+, self-employed, working in unorganized sector",
+            "Should not be a member of other similar schemes"
+        ],
+        "exclusions": [
+            "Government employees",
+            "Organized sector workers",
+            "Beneficiaries of similar central schemes like PM SVANidhi, MUDRA"
+        ]
+    },
+    "documents_required": [
+        "Aadhaar Card",
+        "Bank account details",
+        "Mobile number",
+        "Caste/trade verification by Gram Panchayat/ULB",
+        "Passport size photo"
+    ],
+    "how_to_apply": {
+        "steps": [
+            "Visit nearest CSC center or pmvishwakarma.gov.in",
+            "Register with Aadhaar and mobile number",
+            "Get verified by Gram Panchayat/Urban Local Body",
+            "Receive PM Vishwakarma Certificate and ID Card",
+            "Get free skill training (5-15 days)",
+            "Apply for loan up to ₹1 lakh (first), then ₹2 lakh more"
+        ],
+        "steps_hindi": [
+            "Nearest CSC center ya pmvishwakarma.gov.in par jaayein",
+            "Aadhaar aur mobile number se register karein",
+            "Gram Panchayat se verification karwaayein",
+            "PM Vishwakarma certificate aur ID card milega",
+            "Muft skill training lein (5-15 din)",
+            "₹1 lakh ka loan lein, phir ₹2 lakh aur mil sakta hai"
+        ]
+    },
+    "helpline": "1800-599-0056",
+    "website": "pmvishwakarma.gov.in",
+    "hindi_summary": "PM Vishwakarma Yojana mein kaarigaroon ko muft training, toolkit, aur 3 lakh rupaye tak ka sasta loan milta hai. Badhai, lohar, kumhar, darzi — sab apply kar sakte hain. CSC center ya online apply karein."
 }

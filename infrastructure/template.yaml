@@ -141,13 +141,10 @@ Resources:
       VersioningConfiguration:
         Status: Enabled
       PublicAccessBlockConfiguration:
-        BlockPublicAcls: false
-        BlockPublicPolicy: false
-        IgnorePublicAcls: false
-        RestrictPublicBuckets: false
-      OwnershipControls:
-        Rules:
-          - ObjectOwnership: BucketOwnerPreferred
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
       Tags:
         - Key: Project
           Value: BharatVani
@@ -207,6 +204,11 @@ Resources:
           Type: HttpApi
           Properties:
             Path: /voice/incoming
+            Method: POST
+        VoiceLanguage:
+          Type: HttpApi
+          Properties:
+            Path: /voice/language
             Method: POST
         VoiceGather:
           Type: HttpApi

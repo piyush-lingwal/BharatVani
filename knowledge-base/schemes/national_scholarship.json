@@ -1,11 +1,53 @@
 {
+    "id": "national_scholarship",
     "name": "National Scholarship Portal",
+    "full_name": "National Scholarship Portal - Central & State Scholarships",
     "hindi_name": "राष्ट्रीय छात्रवृत्ति पोर्टल",
     "category": "education",
-    "summary": "Central and state scholarships for students — pre-matric, post-matric, top class education",
-    "hindi_summary": "Chhatron ko padhai ke liye scholarship — school se lekar college tak",
-    "benefits": "Various scholarships: pre-matric (₹1,000-5,000), post-matric (₹5,000-25,000), top class (100% fees)",
-    "eligibility": "Students from SC/ST/OBC/minority/EWS families, family income below ₹2.5-8 lakh",
+    "benefit": "Scholarships ₹5,000-₹50,000+ per year for students from Class 1 to PhD level",
+    "benefit_hindi": "₹5,000 se ₹50,000+ saalana chhaatravritti, Class 1 se PhD tak",
+    "eligibility": {
+        "description": "Students from economically weaker sections, SC/ST/OBC/Minority communities",
+        "description_hindi": "Kamzor aarthik varg, SC/ST/OBC/Alpsankhyak samuday ke chhaatr",
+        "criteria": [
+            "Family annual income below ₹2-8 lakh (varies by scheme)",
+            "SC/ST/OBC/Minority community student",
+            "Enrolled in recognized institution",
+            "Minimum 50-60% marks in previous exam"
+        ],
+        "exclusions": [
+            "Students already receiving scholarship from another source",
+            "Family income above threshold"
+        ]
+    },
+    "documents_required": [
+        "Aadhaar Card",
+        "Income certificate",
+        "Caste certificate (if applicable)",
+        "Marksheet of previous year",
+        "Bonafide certificate from institution",
+        "Bank account details",
+        "Passport size photo"
+    ],
+    "how_to_apply": {
+        "steps": [
+            "Visit scholarships.gov.in",
+            "Register and create account",
+            "Search for applicable scholarship",
+            "Fill application form with required details",
+            "Upload documents",
+            "Submit and track status online"
+        ],
+        "steps_hindi": [
+            "scholarships.gov.in par jaayein",
+            "Account banaayen aur register karein",
+            "Apne liye sahi scholarship dhundhein",
+            "Application form bharein",
+            "Documents upload karein",
+            "Submit karein aur status track karein"
+        ]
+    },
     "helpline": "0120-6619540",
-    "website": "scholarships.gov.in"
+    "website": "scholarships.gov.in",
+    "hindi_summary": "National Scholarship Portal par Class 1 se PhD tak ke chhaatr scholarship ke liye apply kar sakte hain. SC/ST/OBC/Minority chhaatr ko 5000 se 50000 rupaye tak milte hain. scholarships.gov.in par online apply karein."
 }
