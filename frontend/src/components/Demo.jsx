@@ -165,6 +165,18 @@ const Demo = () => {
         if (isSpeaking && synthRef.current) { synthRef.current.cancel(); setIsSpeaking(false); }
     }, [isSpeaking]);
 
+    // Barge-in: user taps the circle to interrupt AI and start speaking
+    const bargeIn = useCallback(() => {
+        if (status !== 'connected') return;
+        if (isSpeaking && synthRef.current) {
+            synthRef.current.cancel();
+            setIsSpeaking(false);
+        }
+        if (!isListening) {
+            setTimeout(() => startListening(), 200);
+        }
+    }, [status, isSpeaking, isListening, startListening]);
+
     const formatTime = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
     const activeColor = isListening ? '#22c55e' : isSpeaking ? '#f97316' : isProcessing ? '#eab308' : '#f97316';
@@ -297,8 +309,11 @@ const Demo = () => {
                                         : `linear-gradient(135deg, ${activeColor}25, ${activeColor}08)`,
                                     border: `2px solid ${status === 'idle' ? 'rgba(255,153,51,0.2)' : activeColor + '50'}`,
                                     boxShadow: status !== 'idle' ? `0 0 40px ${activeColor}20, inset 0 0 20px ${activeColor}08` : 'none',
-                                    transition: 'all 0.5s ease', position: 'relative', zIndex: 2
+                                    transition: 'all 0.5s ease', position: 'relative', zIndex: 2,
+                                    cursor: status === 'connected' ? 'pointer' : 'default'
                                 }}
+                                onClick={bargeIn}
+                                title={isSpeaking ? 'Tap to interrupt' : ''}
                             >
                                 <Phone size={36} color={status === 'idle' ? '#FF9933' : '#ffffff'} style={{
                                     filter: status !== 'idle' ? `drop-shadow(0 0 8px ${activeColor})` : 'none',
