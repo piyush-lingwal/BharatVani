@@ -152,16 +152,12 @@ const Demo = () => {
             return;
         }
 
-        setStatusText('Connecting...');
         timerRef.current = setInterval(() => setCallTimer(prev => prev + 1), 1000);
         recognitionRef.current = setupRecognition();
-
-        setTimeout(async () => {
-            setStatus('connected');
-            setStatusText('🔊 Speaking...');
-            await speakText('Namaste! BharatVani mein aapka swagat hai. Mujhse kuch bhi poochiye.');
-            startListening();
-        }, 800);
+        setStatus('connected');
+        setStatusText('🔊 Speaking...');
+        await speakText('Namaste! BharatVani mein aapka swagat hai. Mujhse kuch bhi poochiye.');
+        startListening();
     }, [setupRecognition, speakText, startListening]);
 
     const endCall = useCallback(() => {
