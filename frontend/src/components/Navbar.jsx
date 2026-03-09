@@ -43,7 +43,7 @@ const Navbar = () => {
     ];
 
     return (
-        <nav className={`fixed top-6 left-1/2 -translate-x-1/2 z-[100] transition-all duration-500 w-[95%] max-w-5xl`}>
+        <nav className={`absolute top-6 left-1/2 -translate-x-1/2 z-[100] transition-all duration-500 w-[95%] max-w-5xl`}>
             <div className={`glass-dark rounded-full px-6 py-3 flex justify-between items-center transition-all ${scrolled ? 'shadow-2xl border-white/10' : 'border-white/5'}`}>
                 <a href="#" className="flex items-center gap-3 group cursor-pointer z-50">
                     <img src="/logo.png" alt="BharatVani Logo" className="w-14 h-auto group-hover:scale-110 transition-transform duration-300" />
