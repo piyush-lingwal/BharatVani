@@ -5,7 +5,8 @@
     "type": "module",
     "main": "index.mjs",
     "scripts": {
-        "test": "node ../../scripts/test-local.mjs"
+        "test": "node --test utils/apiServices.test.mjs utils/bedrock.test.mjs handlers/handlers.test.mjs",
+        "test:legacy": "node ../../scripts/test-local.mjs"
     },
     "dependencies": {
         "@aws-sdk/client-bedrock-runtime": "^3.500.0",

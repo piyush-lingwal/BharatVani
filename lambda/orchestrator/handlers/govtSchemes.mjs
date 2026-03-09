@@ -90,8 +90,23 @@ const SCHEME_ALIASES = {
     'paani': 'jal_jeevan',
     'nal se jal': 'jal_jeevan',
     'matru vandana': 'matru_vandana',
+    'pm matru vandana': 'pm_matru_vandana',
     'pregnancy': 'matru_vandana',
-    'garbhvati': 'matru_vandana'
+    'garbhvati': 'matru_vandana',
+    // Aliases mapping to exact JSON filenames (for schemes with different IDs)
+    'eshram': 'eshram',
+    'e-shram': 'eshram',
+    'e shram': 'eshram',
+    'asangathit mazdoor': 'eshram',
+    'unorganised worker': 'eshram',
+    'food security': 'food_security',
+    'khadya suraksha': 'food_security',
+    'pm jeevan jyoti': 'pm_jeevan_jyoti',
+    'pmjjby': 'pm_jeevan_jyoti',
+    'pm suraksha bima': 'pm_suraksha_bima',
+    'pmsby': 'pm_suraksha_bima',
+    'standup india': 'standup_india',
+    'stand up': 'stand_up_india'
 };
 
 // Multilingual response templates

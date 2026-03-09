@@ -381,7 +381,10 @@ export async function searchWeb(query) {
 
     const TAVILY_API_KEY = process.env.TAVILY_API_KEY || '';
     console.log('searchWeb called | key present:', !!TAVILY_API_KEY, '| query:', query.substring(0, 50));
-    if (!TAVILY_API_KEY) return '';
+    if (!TAVILY_API_KEY) {
+        console.warn('⚠️ TAVILY_API_KEY not set — web search is disabled. Set this env var to enable real-time search.');
+        return '';
+    }
 
     try {
         const controller = new AbortController();

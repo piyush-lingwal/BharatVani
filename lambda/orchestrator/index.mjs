@@ -146,7 +146,16 @@ async function handleApiGateway(event) {
 
         // ---- Web Chat endpoint ----
         if (path.includes('/chat')) {
-            const jsonBody = JSON.parse(body || '{}');
+            let jsonBody;
+            try {
+                jsonBody = JSON.parse(body || '{}');
+            } catch (parseErr) {
+                return {
+                    statusCode: 400,
+                    headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ error: 'Invalid JSON in request body' })
+                };
+            }
             return await handleWebChat(jsonBody, CORS_HEADERS);
         }
 
@@ -192,6 +201,23 @@ async function handleApiGateway(event) {
  */
 async function handleWebChat(body, corsHeaders) {
     const { message, sessionId: clientSessionId } = body;
+
+    // ── Input validation ──
+    if (message !== undefined && typeof message !== 'string') {
+        return {
+            statusCode: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ error: 'message must be a string' })
+        };
+    }
+    const MAX_MESSAGE_LENGTH = 2000;
+    if (message && message.length > MAX_MESSAGE_LENGTH) {
+        return {
+            statusCode: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ error: `Message too long (max ${MAX_MESSAGE_LENGTH} characters)` })
+        };
+    }
 
     // Start new session if needed
     let sessionId = clientSessionId;
@@ -312,20 +338,4 @@ function buildConnectResponse(responseText, language, sessionId, action) {
             action: action
         }
     };
-}
-
-/**
- * Map intent to module name
- */
-function getModuleFromIntent(intent) {
-    const mapping = {
-        'govt_scheme_info': 'govt_schemes',
-        'govt_scheme_eligibility': 'govt_schemes',
-        'crop_price': 'farmer_assistant',
-        'weather_forecast': 'farmer_assistant',
-        'farming_advice': 'farmer_assistant',
-        'general_knowledge': 'general_qa'
-    };
-
-    return mapping[intent] || 'general_qa';
 }

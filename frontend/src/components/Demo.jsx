@@ -114,7 +114,7 @@ const Demo = () => {
 
     const processVoiceInput = useCallback(async (text) => {
         setIsProcessing(true);
-        setStatusText(`💭 Processing: "${text.length > 35 ? text.substring(0, 35) + '...' : text}"`);
+        setStatusText('💭 Processing...');
         try {
             const res = await fetch(API_URL, {
                 method: 'POST',
@@ -140,15 +140,28 @@ const Demo = () => {
         setStatus('connecting');
         setSessionId(null);
         setCallTimer(0);
+        setStatusText('Requesting microphone...');
+
+        // Request mic permission IMMEDIATELY so the browser dialog appears on click
+        try {
+            await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch (err) {
+            console.warn('Mic permission denied:', err);
+            setStatus('idle');
+            setStatusText('Microphone access required');
+            return;
+        }
+
         setStatusText('Connecting...');
         timerRef.current = setInterval(() => setCallTimer(prev => prev + 1), 1000);
         recognitionRef.current = setupRecognition();
+
         setTimeout(async () => {
             setStatus('connected');
-            setStatusText('🔊 Greeting...');
+            setStatusText('🔊 Speaking...');
             await speakText('Namaste! BharatVani mein aapka swagat hai. Mujhse kuch bhi poochiye.');
             startListening();
-        }, 1200);
+        }, 800);
     }, [setupRecognition, speakText, startListening]);
 
     const endCall = useCallback(() => {
